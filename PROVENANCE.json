@@ -1,6 +1,6 @@
 {
-  "engine_commit": "05e23676aa6f49bc232c9a20f186132f2494648e",
-  "engine_ref": "feat/acp-321-publish-spec",
+  "engine_commit": "cdccfa38754e5c62620ea9f2410ff89cb7715022",
+  "engine_ref": "main",
   "files": [
     {
       "path": "LICENSE",
@@ -10,7 +10,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "a9a227c5ff88b7256657af6919c6dc9bf242c2417a00eb135a53dbef77281329",
+      "sha256": "e8e9cf426ff8be6312a0f562ba5a2c60514f2677b779aa6ddf52782208707f93",
       "source_path": "tools/publish-spec/README.md",
       "source_repo": "engine"
     },
@@ -177,5 +177,5 @@
       "source_repo": "engine"
     }
   ],
-  "generated_at": "2026-09-09T09:34:14Z"
+  "generated_at": "2026-09-09T10:56:47Z"
 }

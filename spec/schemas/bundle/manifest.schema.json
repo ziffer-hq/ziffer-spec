@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acp.spec/schemas/bundle/manifest.schema.json",
+  "title": "Policy bundle manifest (ZIFFER-SPEC-001 §8.2)",
+  "x-acp-name": "Manifest",
+  "description": "Identity and provenance of one signed policy bundle. PB-5: bundle_epoch is strictly increasing and never reused or decreased. PB-2: author and reviewer identities MUST differ — asserted by the signer, because a schema cannot express a comparison between two of its own fields.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "tenant_id",
+    "bundle_epoch",
+    "created_at",
+    "author",
+    "reviewer",
+    "expires_at",
+    "min_suite",
+    "custody"
+  ],
+  "properties": {
+    "schema_version": {
+      "description": "Version of this manifest schema. Present so a decoder can refuse a bundle it does not fully understand rather than ignoring fields it does not recognise.",
+      "type": "string",
+      "const": "1"
+    },
+    "tenant_id": {
+      "$ref": "#/$defs/tenant_id",
+      "description": "RAD-5 (v1.3.23). The tenant this bundle governs, inside the tree hash because every member is. This is the value the KMS binds a signing request to (§9.1.1 step 5a) and the Executor binds a receipt to (§9.3 step 8): a request or a receipt naming any other tenant is refused. Through v1.3.22 no bundle named its tenant, so the KMS chose which tenant's receipt key signs from `tenant_id` in the request body -- a value the Policy Engine wrote, i.e. the party under verification, classified T -- and the only thing between tenant A's bundle and tenant B's key was a repository partition a verifier cannot inspect (ACP-139). This is PB-6's move: `quorum_k` went into signed policy as the only authoritative source, and the tenant goes in for the same reason.\n\nREQUIRED, AND ABSENCE IS REFUSAL. A manifest naming no tenant is an invalid bundle under PB-1 and is refused at load by every consumer -- the KMS under RAD-4, the Policy Engine under PB-1, the Executor at §9.3 step 4. There is no default tenant to fall back to, for the reason there is no default notice recipient (DR-13): the fail-safe reading of 'no tenant' is 'no bundle', never 'any tenant'. Not derived from the transport either: the control plane is multi-tenant, so the Policy Engine's mTLS identity is not the tenant's."
+    },
+    "bundle_epoch": {
+      "description": "PB-5. Strictly increasing integer. Never reused, never decreased. The Executor keeps a high-water mark indefinitely (CL-4) — an expiring epoch mark would reopen rollback.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "created_at": {
+      "description": "RFC 3339 UTC. Informational: freshness is enforced by expires_at and by the epoch, never by comparing this to a local clock.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "author": {
+      "$ref": "#/$defs/identity",
+      "description": "Who wrote this bundle. PB-2: MUST differ from reviewer."
+    },
+    "reviewer": {
+      "$ref": "#/$defs/identity",
+      "description": "Who reviewed it. PB-2: MUST differ from author. Two-person integrity on the highest-leverage governance artifact in the system — RES-1 names floor maintenance as exactly that."
+    },
+    "expires_at": {
+      "description": "RFC 3339 UTC. PB-1: the engine MUST refuse to serve an expired bundle. A deployment MAY configure a grace window during which all Decisions are capped at ATTEST — it may not configure one that serves the bundle normally.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "min_suite": {
+      "$ref": "https://acp.spec/schemas/bundle/signature.schema.json#/$defs/suite_id",
+      "description": "CR-4. The signed floor on signature suites. A receipt or attestation declaring a weaker suite is refused. This is in the signed bundle precisely so a downgrade cannot be negotiated at runtime.\n\nIt is NOT this bundle's own floor. It floors the suites of downstream receipts and attestations; the floor THIS bundle must clear is configured out of band in the verifier, because a floor a bundle can lower is not a floor (RES-8). Wiring this field in as the bundle's own floor looks like an improvement and is the recurring defect.\n\nDrawn from `signature.schema.json` rather than restated, so that one edit to the suite list cannot leave the two spellings disagreeing."
+    },
+    "custody": {
+      "$ref": "#/$defs/custody"
+    }
+  },
+  "$defs": {
+    "tenant_id": {
+      "x-acp-name": "TenantId",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048,
+      "description": "One tenant, named once, in signed policy. Declared here and CARRIED by every wire message that names a tenant -- the receipt, the ledger claim, the pending-release record, the audit record and the anchor all `$ref` this definition -- because the bundle is what says which tenant a decision belongs to (RAD-5) and a message can only repeat it. Same direction as `SuiteId` and `Tier`: policy defines, messages carry. Through ACP-78 M1 this was the wire root's one `TenantId`, homed on the ledger claim; it moved here with RAD-5 (v1.3.23) when the bundle gained the field, so that the manifest's copy and the messages' copies cannot be two types.\n\nIN A MESSAGE IT NAMES A NAMESPACE AND DOES NOT AUTHORISE ONE (RES-8). CL-5 permits both topologies -- one ledger per tenant, or one ledger keyed by tenant -- and under the first this value is redundant with the instance the Executor is connected to. It is carried under both so that one claim has one encoding rather than two, which is the Z4 rule applied to a deployment choice. A ledger that RESOLVES which tenant's namespace to use from this field, rather than from the authenticated connection, has let the claimant pick its own scope; EX-1 scopes the Executor's credentials per tenant precisely so the connection is the thing that answers.\n\nTHE MAXIMUM IS L-04's AND ITS SCOPE IS CONTESTED. This declaration is the wire root's one `TenantId`, and it was five declarations with three bounds before ACP-78 M1: unbounded here, 2,048 in the audit record and the anchor, 128 in the receipt and the pending-release record. Two lengths for one value means a tenant nameable in one artifact and unnameable in the artifact that produced it, so one bound was kept -- the only one any clause states. L-04 reads `max string field length 2,048 chars. No exceptions` with `Schema` as its enforcement point. It is applied here and the reading is disclosed rather than assumed: L-04's neighbours L-03, L-05, L-06 and L-07 are all about TENANT-REGISTERED schemas, so `Schema` may well scope it there, and read literally across every wire string it makes CR-6's hybrid floor unsatisfiable -- an ML-DSA-65 signature is 4,412 base64 characters. AB-6's rationale separately treats `tenant_id` length as deployment-variable in as many words. Whichever way the document settles that, this file states one length rather than three."
+    },
+    "identity": {
+      "x-acp-name": "Identity",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "display_name"],
+      "properties": {
+        "id": {
+          "description": "Stable identifier. Compared byte-for-byte for PB-2; display_name is never used for the comparison because two people can share a display name.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    },
+    "custody": {
+      "x-acp-name": "Custody",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tier", "classical", "pq"],
+      "description": "How the bundle signing key is held.\n\nCLASSIFIED **T** (trusted as transmitted) AND NOT A CONTROL INPUT. A verifier MUST NOT weight any decision on this object. A bundle asserting its own custody strength is the recurring defect RES-8/RES-9/RES-10 names: a verifier must never accept a derived security value from the party it is verifying. A compromised signer writes this object freely.\n\nIt is recorded for humans — auditors, operators, and the reviewer named above — and for no other purpose. The real binding is that the verifier is configured out of band with the expected public key.",
+      "properties": {
+        "tier": {
+          "$ref": "https://acp.spec/schemas/bundle/floors.schema.json#/$defs/tier",
+          "description": "T0 development only; T1 encrypted key on an air-gapped host; T2 non-exportable cloud KMS; T3 PKCS#11 HSM. Split custody reports the WEAKER of its two legs, because a claim should never round in the flattering direction.\n\nThe SAME four values as a resource floor, drawn from `floors.schema.json` so there is one definition of the tier ladder. Note that the two uses are unrelated in meaning: a resource floor says how sensitive a thing is, a custody tier says how a key is held. They share a scale, not a subject."
+        },
+        "classical": {
+          "$ref": "#/$defs/custody_leg"
+        },
+        "pq": {
+          "$ref": "#/$defs/custody_leg"
+        }
+      }
+    },
+    "custody_leg": {
+      "x-acp-name": "CustodyLeg",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tier", "mechanism"],
+      "description": "Custody of one primitive. The two legs may differ, and differing is not a weakness: verification is conjunctive (CR-3), so forging requires BOTH signatures and therefore BOTH keys. An attacker must defeat both mechanisms.",
+      "properties": {
+        "tier": {
+          "$ref": "https://acp.spec/schemas/bundle/floors.schema.json#/$defs/tier"
+        },
+        "mechanism": {
+          "description": "Free text naming the concrete mechanism, e.g. \"YubiHSM2 slot 3\" or \"age-encrypted file, offline laptop\". Human-readable only.",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    }
+  }
+}

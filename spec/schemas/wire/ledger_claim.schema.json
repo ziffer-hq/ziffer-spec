@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acp.spec/schemas/wire/ledger_claim.schema.json",
+  "title": "Ledger Claim (ZIFFER-SPEC-001 §9.3.1, CL-2 / CL-3 / CL-6 / CL-7)",
+  "x-acp-name": "LedgerClaim",
+  "description": "One claim made against the Consumption Ledger. Carried on leg F3.4 of the leg register (ZIFFER-DEPLOY-001 Annex A), Executor -> Consumption Ledger, whose cited receiving obligations are CL-2, CL-3, CL-6 and CL-7. The Consumption Ledger is TCB (§4.3): a ledger that falsely reports an identifier absent reopens T-09 (receipt replay) and T-14 (attestation amplification). This document is the smallest thing that can be wrong before any of those guarantees is reachable at all.\n\nWHY THIS IS FOUR CLOSED OBJECTS AND NOT ONE OBJECT WITH OPTIONAL FIELDS. CL-3 enumerates four identifier classes and they do not carry the same value: a receipt nonce is 128 bits rendered `b64:` (WE-4, L-17), an attestation id is a `sha256:` digest over the canonical CBOR of the whole Attestation Object (AT-1, AT-8a), a bundle epoch is an integer high-water mark (CL-3, RAD-3), and an origin binding is a PAIR, `proposal_hash` to `origin_nonce` (DS-6f). Folding those into one object requires optional fields, and an optional field is Z4 exactly as AT-8b describes it one layer up: the same claim present-as-null and the same claim with the field omitted are each well formed, encode differently, and any ledger that keys or audits on the encoded claim then holds two rows for one claim. One nonce, two slots, which is the hole CL-3 exists to close. So each class is its own object, every field is REQUIRED, `additionalProperties` is false, and the composition is `oneOf` rather than `anyOf` so that a document matching two branches is REFUSED rather than resolved to the first match.\n\n`x-acp-absent` deliberately appears nowhere below. §9.3.1 declares no absent-value default for a claim, and inventing one here would let a malformed claim be normalized into a well-formed one, which is the precise opposite of what CL-2 requires when the ledger cannot proceed. A default that turns a refusal into an acceptance is not a fail-safe default.\n\nWHY `artifact_class` IS CARRIED AND NOT INFERRED FROM THE VALUE. CL-5's key is the triple `(tenant_id, artifact_class, identifier)`, and the class is what keeps the four namespaces disjoint. Without it, one execution per receipt (T-09) and one receipt per attestation (T-14) stop being independent guarantees: an identifier claimed in one class is observed as claimed in the other, so consuming an attestation can silently consume a nonce that was never issued, or fail to consume one that was. Inferring the class from the value's syntax is strictly worse than carrying it, because two of the four classes already share the `sha256:` form -- an attestation id and the key half of an origin binding are both digests, and nothing in the string distinguishes them.\n\nWHAT IS NOT A FIELD, AND WHY. (a) No timestamp. CL-8 requires identifier, class, timestamp and Executor identity in the audit row of every claim operation, hit and miss; it does not say the claim carries them, and F3.4 does not cite CL-8 at all. A claim-carried timestamp lets the party the audit row is ABOUT choose the time that row is dated, which is the T-32 shape -- a component certifying a fact about itself -- while the ledger has its own clock and is the party doing the recording. (b) No Executor identity, for the same reason: an identity taken from the authenticated connection (mTLS is REQUIRED between components, §4.3) is evidence, an identity typed into the message by the sender is a name for one. (c) No compare-and-swap comparand. CL-2 requires CAS or an equivalent atomic primitive, but the expected value is fixed by the semantics rather than chosen per call -- absence, for the three consumption classes, and absence-or-the-already-adopted-value for the binding (CL-7) -- so a transmitted expectation would let the claimant choose the bar it is measured against. For the epoch class that is not a subtlety: a transmitted expected high-water mark is T-15 bundle rollback with extra steps. (d) No response. The ledger's answer travels the other way and the register has no return row for it; that omission is recorded against this schema rather than silently repaired by modelling a message the register does not carry.\n\nWHAT THIS SCHEMA CANNOT CONSTRAIN, STATED SO THE CLAIM IS NOT READ WIDER THAN IT IS. Every clause F3.4 cites is about BEHAVIOUR or ORDERING, and none of them is expressible in a message shape. CL-1 linearizability; CL-2 atomicity and fail-closed when the ledger is unavailable; CL-6 fail-closed when absence cannot be confirmed; CL-7 completing the read phase across the quorum before mutating any replica, and never resolving a disagreement by vote; CL-4 retention; DS-6f immutability of the binding and the critical alert on a rebind attempt. A schema-valid claim says nothing about any of them. They are per-implementation obligations (`spec/vectors/OBLIGATIONS.md`), exercised by `reference/suites/partition_suite.py` and `partition_integration.py`. An implementation reporting \"CL-7 satisfied\" because a claim validated against this file has answered a different question from the one CL-7 asks.\n\nTHIS SCHEMA HALTED `tools/codegen.sh`, AND THE HALT IS WHAT GOT THE RULE WRITTEN. `oneOf` was on the generator's refused list, because it emitted no rule for a tagged union and a generated type that looked complete while expressing none of the union would be worse than no type at all. Neither way of making the halt go away was taken, because both damage something real: collapsing the four classes into one object needs optional fields, which is the Z4 defect this schema is shaped to refuse, and dropping a class contradicts CL-3, which enumerates four. What the halt actually said is that the ACP-78 wire surface contains a tagged union -- so in M1 the generator was taught one. It accepts a `oneOf` whose branches are closed objects made disjoint by a single required `const` field, PROVES that discriminator from the schema rather than being told it, and still halts on any `oneOf` that is not tagged. The tag is `artifact_class`, which CL-5 already makes a column of the ledger key, so nothing here exists for the generator's benefit. What the generated union deliberately does NOT carry is a decoder that tries branches until one fits: `first shape that fits` is how a document meant as one artifact class is accepted as another, which is the namespace collapse `artifact_class` exists to prevent.\n\nSUITE 12 CLASSIFICATION. Every field below is class T at the schema layer, because shape is not authority and this document constrains shape. Two of them need their residual said out loud. `tenant_id` NAMES a namespace and does not authorise one: where a deployment runs one ledger per tenant (CL-5) the tenant is fixed by the instance and the authenticated connection, and a claim MUST NOT reach another tenant's namespace by naming it. `origin_nonce` is a value being pinned for the first time, never evidence that a binding exists -- on a re-drive the Executor MUST READ the origin from the ledger and derive `idempotency_key` from what it read (DS-6f, closing Z3), and that read is a different operation from this message.",
+  "oneOf": [
+    { "$ref": "#/$defs/receipt_nonce_claim" },
+    { "$ref": "#/$defs/attestation_id_claim" },
+    { "$ref": "#/$defs/bundle_epoch_claim" },
+    { "$ref": "#/$defs/origin_binding_claim" }
+  ],
+  "$defs": {
+    "receipt_nonce_claim": {
+      "x-acp-name": "ReceiptNonceClaim",
+      "description": "One execution per receipt (CL-3, T-09). The Executor claims the receipt nonce at §9.3 step 6, before any effect leaves the control plane, and a second receipt bearing the same nonce is refused because the ledger already holds it. AT-5's shape applies here too: single use is enforced by consumption, never by assertion -- v1.2.0 stated the property and shipped no mechanism.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tenant_id", "artifact_class", "identifier"],
+      "properties": {
+        "tenant_id": { "$ref": "https://acp.spec/schemas/bundle/manifest.schema.json#/$defs/tenant_id" },
+        "artifact_class": {
+          "type": "string",
+          "const": "receipt_nonce",
+          "description": "CL-3's first identifier class. See the note on `artifact_class` naming in `$defs/tenant_id` and in the schema description: the four tokens are this schema's rendering of class names the specification states only in prose."
+        },
+        "identifier": {
+          "$ref": "https://acp.spec/schemas/wire/attestation_object.schema.json#/$defs/nonce128",
+          "description": "The receipt's `nonce` (§9.2), sized 128 bits by L-17 and typed by WE-4. Named `identifier` rather than `nonce` because CL-5 writes the ledger key as `(tenant_id, artifact_class, identifier)` and a second spelling of one column is the defect this repository is built around."
+        }
+      }
+    },
+    "attestation_id_claim": {
+      "x-acp-name": "AttestationIdClaim",
+      "description": "One receipt per attestation (CL-3, T-14). A second receipt bearing the same attester signatures and a fresh nonce is rejected at §9.3 step 7 because the id is already consumed.\n\nTHE OBLIGATION THIS CLAIM DEPENDS ON IS NOT AT THE LEDGER. §9.3 step 7b(v) requires the Executor to RECOMPUTE `attestation_id := SHA-256(canonical(obj))` per AT-1 and to claim the recomputed value, never an id read from the receipt -- that is Y1b, and the Attestation Object schema carries no `attestation_id` property for the same reason. The ledger cannot tell a recomputed id from a transmitted one; both arrive here as the same 71 characters. So this field is class T AT THE LEDGER and the control lives entirely at the Executor. Recording that here is the point: a reader who takes ledger consumption as the whole of the T-14 defence has the same misreading v1.3.2 shipped, where CL-3 guaranteed one receipt per attestation and never asked whether it was the RIGHT receipt.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tenant_id", "artifact_class", "identifier"],
+      "properties": {
+        "tenant_id": { "$ref": "https://acp.spec/schemas/bundle/manifest.schema.json#/$defs/tenant_id" },
+        "artifact_class": { "type": "string",
+          "const": "attestation_id" },
+        "identifier": {
+          "$ref": "https://acp.spec/schemas/wire/attestation_object.schema.json#/$defs/sha256",
+          "description": "The recomputed `attestation_id` (AT-1): SHA-256 over the canonical CBOR encoding of the whole Attestation Object (AT-8a). Carried with its `sha256:` prefix per §11.2, which pins the type to the character and records why it had to -- an implementer who fed forward raw digest bytes built a different chain while following the text. Here the same slip is worse than a different chain: a prefixed issuer and an unprefixed verifier derive two ids for one object and claim two ledger slots, which is Z4 and T-14 reopening with no optional field anywhere in reach."
+        }
+      }
+    },
+    "bundle_epoch_claim": {
+      "x-acp-name": "BundleEpochClaim",
+      "description": "The bundle-epoch high-water mark consulted by RAD-3 (CL-3, T-15). Retention is INDEFINITE (CL-4): an expiring epoch mark reopens rollback, because a genuine but superseded and more permissive bundle becomes acceptable again the moment the mark that refused it is forgotten.\n\nTHIS CLASS DOES NOT BEHAVE LIKE THE OTHER THREE, AND THE SPECIFICATION CALLS IT A CONSUMPTION ANYWAY. CL-3 lists bundle epochs under \"Consumed identifier classes\", but an epoch high-water mark is not consumed: many receipts legitimately reference the same epoch, and a ledger that treated this as at-most-once would refuse the second receipt issued under one bundle. CL-4 says as much by giving the mark indefinite retention while nonces and attestation ids expire. CL-3's own text does that disclosure for the fourth class -- \"Unlike the three classes above this is a *binding*, not a consumption\" -- and does not do it for this one. The divergence is recorded with this schema rather than resolved here, because deciding it is a normative act.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tenant_id", "artifact_class", "identifier"],
+      "properties": {
+        "tenant_id": { "$ref": "https://acp.spec/schemas/bundle/manifest.schema.json#/$defs/tenant_id" },
+        "artifact_class": { "type": "string",
+          "const": "bundle_epoch" },
+        "identifier": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "The `bundle_epoch` of the receipt under verification (§9.2). An integer, not a digest, which is why the four classes cannot share one object: `identifier` is a string in the other three branches and there is no encoding of this value that is simultaneously both. Monotonicity is a LEDGER property compared against the durable mark, never a property of this value -- a claim asserting it is the highest epoch ever seen would be the claimant setting its own bar, which is what RAD-3 replaced the v1.2.0 history window to prevent."
+        }
+      }
+    },
+    "origin_binding_claim": {
+      "x-acp-name": "OriginBindingClaim",
+      "description": "The immutable `proposal_hash` to `origin_nonce` binding (CL-3, DS-6f, T-22), claimed at the FIRST receipt for a Proposal. Unlike the three classes above this is a BINDING and not a consumption: it is written once and read many times, its retention is indefinite (CL-3), and a rebind attempt is a critical alert.\n\nWHY IT EXISTS. DS-6b as drafted in v1.3.4 required the Executor to verify a receipt-claimed `origin_nonce` was \"recorded as consumed in the Consumption Ledger\". That is a MEMBERSHIP test: it proves the value is *a* consumed nonce, never that it is *the* origin of this Proposal. A compromised KMS therefore names any other consumed nonce as the origin, the idempotency key moves, the target cannot dedup, and the floor-HIGH action doubles -- Z3, the fourth recurrence of the RES-8 class, found inside the fix for Y3.\n\nWHAT THIS CLAIM IS AND IS NOT. It PINS a value; it is not evidence that a value was pinned. On a re-drive the Executor MUST read the origin from the ledger and derive `idempotency_key` from what it read; a receipt-carried `origin_nonce` is diagnostic only and must match or the Executor fails closed with a critical alert (DS-6f). That read is a different operation and this schema does not model it.\n\nCL-7 GOVERNS THE WRITE AND CANNOT BE SEEN FROM HERE. The binding MUST (i) read from a reachable majority, (ii) fail closed if reachable replicas disagree, never resolving a security value by majority vote, and (iii) adopt an existing binding where one is found, writing only when none exists. The converse ordering leaves a partitioned write permanently split across the replica set: every later read sees two values and fails closed forever, a durable denial of service on that Proposal produced by an ordinary network event with no attacker. That defect was real, was found by `partition_suite.py`, and is invisible to this document -- a claim that validates here says nothing about the order in which the ledger read and wrote.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tenant_id", "artifact_class", "identifier", "origin_nonce"],
+      "properties": {
+        "tenant_id": { "$ref": "https://acp.spec/schemas/bundle/manifest.schema.json#/$defs/tenant_id" },
+        "artifact_class": { "type": "string",
+          "const": "origin_binding" },
+        "identifier": {
+          "$ref": "https://acp.spec/schemas/wire/attestation_object.schema.json#/$defs/sha256",
+          "description": "The `proposal_hash` (DS-6f), which is the KEY half of the binding and therefore the ledger key's `identifier` position under CL-5. It is the canonical Proposal's hash under RFC 8785 (JCS), §9.2 -- the Proposal canonicalizes differently from the receipt and the Attestation Object (canonical CBOR, WE-1/WE-2/AT-8a), and mixing the two is the encoding split at the point it does the most damage."
+        },
+        "origin_nonce": {
+          "$ref": "https://acp.spec/schemas/wire/attestation_object.schema.json#/$defs/nonce128",
+          "description": "The BOUND half: the receipt nonce of the first receipt issued for this Proposal (DS-6f). Carried in the claim because the ledger cannot derive it -- it is the value being pinned. It is not a second spelling of the receipt-nonce claim's `identifier` and does not consume a slot in that class; the two claims are distinct rows even where the value is byte-identical, which is what `artifact_class` in the key is for.\n\nDS-6f requires this binding to be claimed ATOMICALLY \"alongside the nonce claim itself\", and a schema of one message per class cannot express an atomic pair. Whether the two travel as one message or two is unanswered by the specification and is recorded as an open question against this schema; the Python reference issues them as two separate calls four checklist steps apart (§9.3 step 6 and step 10)."
+        }
+      }
+    }
+  }
+}

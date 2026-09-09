@@ -1,0 +1,207 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acp.spec/schemas/bundle/attesters.schema.json",
+  "title": "Attester public key registry (ZIFFER-SPEC-001 §8.2 attesters/)",
+  "x-acp-name": "AttesterRegistry",
+  "description": "The approver and confirmer verification keys, and the quorum k.\n\nPUBLIC KEYS ONLY. This is not a stylistic constraint — it is the v1.3.14 custody fix, and it closed a real hole. Through v1.3.13 the primitives were HMAC-SHA256, so verifying a signature required holding the key that made it: the Executor held every attester key and could therefore MINT ITS OWN QUORUM. INV-1-HIGH did not hold against the very adversary it names, and no protocol test could have found it, because the defect was key CUSTODY rather than control flow. Never reintroduce a symmetric primitive here, not even for tests.\n\nPB-KEY: this registry is INSIDE the bundle hash. A `policy_bundle_hash` that does not cover it lets two Executors trusting DIFFERENT attesters agree that they hold the same bundle — which is the encoding-split defect wearing a key registry as a hat.\n\nACK-4 (reference-level, see reference/src/acp_ack.py — not a spec clause): an attester's identity is the one the SIGNATURE covers, never a transmitted `attester_id` field. This registry maps identity to key so that the signature can establish which of these entries signed. It does not authorise anyone to name themselves.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "quorum_k",
+    "attesters"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1"
+    },
+    "quorum_k": {
+      "description": "How many DISTINCT attesters must sign the same canonical hash for a floor-HIGH action. INV-1-HIGH. k=1 is permitted by the schema and is a deployment choice, not a conformance failure — but it collapses the invariant to single-compromise, so a deployment choosing it should say so in its residual risk statement rather than discover it later.\n\nDR-9 is enforced separately and is not expressible here: whoever proposed the action can never be among the k.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "attesters": {
+      "type": "object",
+      "description": "attester identity -> a machine's hybrid public key or a human's WebAuthn credential (`kind` tells which, HM-1, v1.3.30). Open map (people are deployment-specific), closed entries.\n\nPB-DISTINCT (NORMATIVE, and NOT EXPRESSIBLE HERE): no two identities may carry the same public key. `quorum_k` counts DISTINCT KEY HOLDERS; a registry mapping two names onto one key lets the holder of that one private key sign two objects with different nonces, label them with the two names, and satisfy a k=2 quorum alone. INV-1-HIGH broken by a single compromise, reached through the registry rather than through the threshold.\n\nJSON Schema cannot state this: `uniqueItems` applies to arrays, and there is no keyword for uniqueness across the VALUES of a map. The rule is therefore enforced by the LOADER, and a loader that does not enforce it is non-conformant however cleanly it validates. Reference implementation: `Bundle.__post_init__` in reference/src/acp_executor.py, which refuses at construction — a bundle whose registry cannot support its own quorum is malformed everywhere it is used, not only on the quorum path. Compare over the full hybrid identity, not the classical half alone; two identities sharing only an ML-DSA key is CR-3 undone at the registry.",
+      "propertyNames": {
+        "minLength": 1,
+        "maxLength": 128
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/attester"
+      },
+      "x-acp-absent": {
+        "clause": "AT-9, PB-6",
+        "behaviour": "refuse",
+        "why": "an identity absent from the signed registry is not an attester. Its signature verifies against no key here and counts toward no quorum, and resolving it to a default would let a name nobody enrolled satisfy INV-1-HIGH. ACK-4: identity is what the SIGNATURE covers, never a transmitted `attester_id` — this map is how a signature is resolved to an enrolled key, not how a name authorises itself."
+      }
+    },
+    "min_attester_assurance": {
+      "$ref": "#/$defs/assurance",
+      "description": "AT-10: the minimum authenticator assurance every attestation counted toward a quorum must clear. OPTIONAL, and absent means AS0 — the permissive reading, taken deliberately and disclosed in the same breath, exactly as `quorum_k: 1` is permitted and must be disclosed (PB-6): a floor nobody chose must not silently invalidate every registry written before the field existed, and AS0 is what those registries were already getting. A deployment claiming any Door A property stronger than key possession raises this floor; the EU AI Act Art. 14(5) reading of 'two natural persons' is not supported at AS0 and a deployment at AS0 should say so in its residual risk statement.",
+      "x-acp-absent": {
+        "clause": "AT-10",
+        "behaviour": "value",
+        "value": "AS0",
+        "why": "the floor is POLICY, and its permissive default is taken openly and disclosed on PB-6's terms (quorum_k = 1): a floor nobody chose must not silently invalidate every registry written before the field existed. A deployment claiming any Door A property stronger than key possession raises it."
+      }
+    },
+    "assurance": {
+      "type": "object",
+      "description": "AT-10: attester identity -> the assurance level that identity's key was ENROLLED at, over $defs/assurance. A SEPARATE map beside `attesters` rather than a field inside each entry, deliberately: every implementation carries it this way on the wire (the reference Bundle's dict, the differential bridge, the Rust QuorumPolicy), and the map shape is what gives the generated fail-safe accessor an absent rule to answer with -- an identity missing from this map reads AS0, a claim's safe default, inverted from RK-1's floors: an entry claiming less than it has can only cause a refusal, one defaulting to more than it has is the attack. What no field here can carry is honesty: whether a key is REALLY hardware-bound is established at enrolment by humans, and a wrong label is A-7's conceded shape, stated at AT-10.",
+      "propertyNames": {
+        "minLength": 1,
+        "maxLength": 128
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/assurance"
+      },
+      "x-acp-absent": {
+        "clause": "AT-10",
+        "behaviour": "value",
+        "value": "AS0",
+        "why": "an identity with no recorded level is read as AS0 -- for a CLAIM the low default is the fail-safe one. Resolving it upward would let an unlabelled key satisfy a floor nobody vouched it for."
+      }
+    }
+  },
+  "$defs": {
+    "attester_role": {
+      "x-acp-name": "AttesterRole",
+      "description": "Which of the two acknowledgement duties an enrolled identity may discharge.\n\nHoisted into `$defs` for the same reason `reversibility` was: an inline enum has no name, and a generator inventing one invents a name that drifts.\n\nDELIBERATELY NOT ORDERED. A confirmer does not outrank an approver; they are different duties, and DR-9's separation is enforced per action against the proposer rather than by comparing roles.",
+      "type": "string",
+      "enum": [
+        "approver",
+        "confirmer"
+      ]
+    },
+    "attester": {
+      "x-acp-name": "Attester",
+      "description": "One registry entry: a machine (`kind: hybrid`) or a human (`kind: webauthn`). A TAGGED union, deliberately: the generator refuses an untagged `oneOf` because 'first branch that parses' is how a document meant as one thing is read as another, and a key kind guessed from which fields are present is exactly that guess. Every entry carries `kind`; one without it is `Malformed` at load (HM-1).",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/machine_attester"
+        },
+        {
+          "$ref": "#/$defs/human_attester"
+        }
+      ]
+    },
+    "ed25519_pub": {
+      "x-acp-name": "Ed25519PublicKey",
+      "description": "Ed25519 verification key (RFC 8032), base64. 32 bytes raw; the decoded length is asserted in code, because a base64 string of the wrong length is well-formed JSON and a schema pattern alone would let a truncated key through.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]{43}=$"
+    },
+    "mldsa65_pub": {
+      "x-acp-name": "MlDsa65PublicKey",
+      "description": "ML-DSA-65 verification key (FIPS 204), base64. 1952 bytes raw. Its size is why hybrid receipts run 13.2 kB against 256 B classical-only — a 53x wire increase that is algorithm-bound and does not improve with a faster library.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]{2603}=$"
+    },
+    "assurance": {
+      "x-acp-name": "Assurance",
+      "x-acp-ordered": true,
+      "description": "AS0 software key · AS1 multi-factor-protected key · AS2 hardware-bound key. Ordered: AS0 < AS1 < AS2, and AT-10 compares an entry's level against the registry floor with >=, so the ordering is load-bearing — a chain like §4's custody tiers and floors' resource tiers, NOT like suites, whose floor is containment (CR-4) precisely because suites do not rank. Correspondence, stated so the M-A annex can cite it and a buyer can map it: AS1 is the arrangement NIST SP 800-63B calls AAL2 (multi-factor, software permitted), AS2 is AAL3's (hardware authenticator). The names are this specification's own because an external framework's labels move on that framework's schedule.",
+      "type": "string",
+      "enum": [
+        "AS0",
+        "AS1",
+        "AS2"
+      ]
+    },
+    "machine_attester": {
+      "x-acp-name": "MachineAttester",
+      "description": "A machine attester: a service that signs with a hybrid key pair -- the sandbox robot, a confirmer that is a system. The shape every registry entry had before v1.3.30, plus `kind`, which every entry now carries so that a human and a machine are told apart by a signed tag and never by which fields happen to be present (HM-1).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "role",
+        "classical",
+        "pq"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "hybrid",
+          "description": "The discriminator. `hybrid`: this identity signs with the two-primitive pair below and is held to CR-3/CR-4."
+        },
+        "role": {
+          "$ref": "#/$defs/attester_role",
+          "description": "approver signs for authorisation; confirmer provides the non-operator positive acknowledgement DR-9 requires for irreversible actions. One person MAY hold both roles in the registry — DR-9 is enforced per action against the proposer, not by role exclusion here."
+        },
+        "classical": {
+          "$ref": "#/$defs/ed25519_pub"
+        },
+        "pq": {
+          "$ref": "#/$defs/mldsa65_pub"
+        }
+      }
+    },
+    "human_attester": {
+      "x-acp-name": "HumanAttester",
+      "description": "A human attester (HM-1, v1.3.30): a person who enrolled a WebAuthn credential -- a passkey on their phone or laptop, or a hardware security key -- through a registration ceremony with user verification required and attestation requested. Their signature is a WebAuthn assertion over the same bytes a machine signs (HM-2), verified under HM-4; it is classical, and HM-6 says what that costs. The level recorded for this identity in `assurance` is DERIVED from the authenticator (platform + UV = AS1, roaming hardware = AS2) and an entry at AS0 or with no level is an invalid bundle.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "role",
+        "rp_id",
+        "credential_id",
+        "public_key",
+        "alg"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "webauthn",
+          "description": "The discriminator. `webauthn`: this identity is a person holding an authenticator; the entry's signature is an assertion, never a hybrid pair."
+        },
+        "role": {
+          "$ref": "#/$defs/attester_role",
+          "description": "approver signs for authorisation; confirmer provides the non-operator positive acknowledgement DR-9 requires for irreversible actions. One person MAY hold both roles in the registry — DR-9 is enforced per action against the proposer, not by role exclusion here."
+        },
+        "rp_id": {
+          "$ref": "#/$defs/rp_id"
+        },
+        "credential_id": {
+          "$ref": "#/$defs/credential_id"
+        },
+        "public_key": {
+          "$ref": "#/$defs/cose_key"
+        },
+        "alg": {
+          "$ref": "#/$defs/webauthn_alg"
+        }
+      }
+    },
+    "rp_id": {
+      "x-acp-name": "RpId",
+      "type": "string",
+      "pattern": "^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?)+$",
+      "description": "The WebAuthn relying-party identifier the credential was created for: the approval page's host, lower-case, no scheme, no port, no path (e.g. `approve.example.com`). Stored PER ENTRY because that is what the credential itself is bound to; HM-4 (c) requires the assertion's origin to be exactly `https://` + this, and (d) requires `rpIdHash` = SHA-256 of it. Signed policy: an assertion for any other origin is an assertion made on another site, which is the phishing case this field refuses."
+    },
+    "credential_id": {
+      "x-acp-name": "CredentialId",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]{20,}={0,2}$",
+      "description": "The authenticator's credential id from registration, base64 (the registry's encoding, as `ed25519_pub` and `mldsa65_pub` are). Not a secret and not a key: it names the credential, and the Consumption Ledger keys the signature counter on it (HM-4 (f))."
+    },
+    "cose_key": {
+      "x-acp-name": "CoseKey",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9+/]{40,}={0,2}$",
+      "description": "The credential's public key as a COSE_Key (RFC 9052) map, canonical CBOR, base64, holding EXACTLY the labels kty, crv, x and (for EC2) y and nothing else. Every real authenticator also returns label 3 (alg); the enrolling service strips it before the entry is written, because a key that admits two encodings is two `public_key` strings for one credential, and PB-7's distinctness over `public_key` would then see one holder as two. The verifier refuses label 3 at load as Malformed rather than tolerating it, so the one encoding is the one the registry can hold. Not re-encoded to a raw point either, for AB-1's reason: a re-encoding is a second definition of the key. The verifier decodes it (kty EC2 / P-256 for `webauthn-es256`; kty OKP / Ed25519 for `webauthn-ed25519`) and refuses at load a key whose kty/crv/alg do not match the entry's `alg`, a P-256 point not on the curve, or an Ed25519 point of small order (HM-5, PB-9)."
+    },
+    "webauthn_alg": {
+      "x-acp-name": "WebauthnAlg",
+      "type": "string",
+      "enum": [
+        "webauthn-es256",
+        "webauthn-ed25519"
+      ],
+      "description": "Which key type HM-4 (e) verifies under: ES256 (ECDSA P-256 with SHA-256, DER-encoded, COSE alg -7 -- what every authenticator supports) or Ed25519 (COSE alg -8, RFC 8032 under ACP-106's strict rule). An attestation-entry suite only: CR-8 forbids either as a bundle, receipt or door suite, and neither is compared against `min_suite` -- a human leg is outside the floor by construction, and HM-6 states the cost."
+    }
+  }
+}

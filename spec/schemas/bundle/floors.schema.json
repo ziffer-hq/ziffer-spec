@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acp.spec/schemas/bundle/floors.schema.json",
+  "title": "Resource tier floors (ZIFFER-SPEC-001 §8.3.2, RK-1)",
+  "x-acp-name": "Floors",
+  "description": "Maps each governable resource to its floor tier.\n\nRK-1: a resource ABSENT from this file MUST be treated as T3. That rule cannot be expressed in JSON Schema — a schema constrains what is present, never what is missing — so it is carried instead by the `x-acp-absent` annotation on `floors` below, which `tools/codegen.sh` reads to GENERATE the fail-safe direction into `Tier::for_unclassified()` (crates/acp-core) and its TypeScript equivalent. The Python reference spells the same default at `acp_executor.py`. A conformance case asserts it, because a fail-safe default that only exists in a comment is not a control — and stating it only in this prose is what let the Rust and TypeScript versions return HIGH, a RISK LEVEL, where a TIER was required.\n\nRES-1 (A-7): the architecture guarantees no runtime component evaluates a resource BELOW its signed floor. It cannot know whether the floor was set correctly. A production database labelled T0 defeats the design with zero attack. Floor maintenance is the highest-leverage governance task in the system and is structurally unprovable — this file is where that risk concentrates.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "floors"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1"
+    },
+    "floors": {
+      "type": "object",
+      "description": "resource identifier -> floor tier. Deliberately an open map: resources are deployment-specific. The VALUES are closed.",
+      "propertyNames": {
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/tier"
+      },
+      "x-acp-absent": {
+        "clause": "RK-1",
+        "behaviour": "value",
+        "value": "T3",
+        "why": "absent means unknown, and unknown is the HIGHEST tier, not the lowest (P-4). Returning T0 or T1 here is the whole class of defect this specification exists to prevent, and it is the direction a lookup returning `Option` invites."
+      }
+    }
+  },
+  "$defs": {
+    "tier": {
+      "x-acp-name": "Tier",
+      "x-acp-ordered": true,
+      "description": "T0 public/sandbox \u00b7 T1 internal \u00b7 T2 production \u00b7 T3 privileged. Ordered: T0 < T1 < T2 < T3, and \u00a78.4 composes tiers with max, so the ordering is load-bearing rather than cosmetic. THIS IS ALSO THE WIRE ROOT'S `Tier` (ACP-78 M1): `spec/schemas/wire/context_read.schema.json` `$ref`s this declaration across roots rather than restating it, because TR-3 composes the FLOOR from this table with the RAISE from the Context read using `max`, and a value nameable in one and not the other leaves that `max` undefined. It was declared in both roots until M1, character for character, each copy carrying a note saying the two must move together.",
+      "type": "string",
+      "enum": ["T0", "T1", "T2", "T3"]
+    }
+  }
+}

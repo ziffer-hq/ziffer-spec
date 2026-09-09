@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acp.spec/schemas/wire/notification.schema.json",
+  "title": "Notification (ZIFFER-SPEC-001 §9.6, DR-2 / DR-3 / DR-8 / DR-14)",
+  "x-acp-name": "Notification",
+  "description": "The out-of-band summary of a held floor-HIGH action, as it travels: a signed Rendered Summary (`$defs/rendered_summary`, role `notification`) beside its signature, delivered to every attester recorded in the verified Attestation Objects and to the operator (DR-2, DR-3). Carried on legs F5.3 and F8.2 of the leg register (ZIFFER-DEPLOY-001 Annex A); F8.2 is the same notification reaching the operator, whom DR-3 makes a required recipient.\n\nTHIS SCHEMA IS THE ONE PERMITTED COMMON DEPENDENCY BETWEEN THE NOTIFIER AND THE APPROVAL SERVICE, AND NOTHING ELSE IS. DR-2 requires the summary to be rendered by a service that shares NO rendering code path with the Attestation Presentation Service, and states the consequence in as many words: a shared formatting library used by both is a conformance failure EVEN WHEN it renders honestly from canonical bytes, because independence has to hold under compromise. So a shared renderer, formatter, sanitiser, date helper or component library between the two services is the vulnerability, not a refactor. Two channels sourced from one renderer are one channel wearing two hats: a single compromise of that renderer lies to both simultaneously, and the approver's veto -- the mechanism deferred release exists to provide -- disappears with no signature failing anywhere. The wire format is the permitted dependency precisely because it carries no rendering behaviour. `sim/notify/render.py` and `sim/approve/render.py` are two files that do the same job differently on purpose, and say so at the top.\n\nNONE OF THAT IS CHECKABLE HERE. DR-2's structural half is a property of two code trees; JSON Schema constrains one message. Nothing below detects a shared renderer, and this file must not be read as though it did.\n\nT-32 CLOSED HERE FOR TWO OF ITS THREE ROWS, AND THIS FILE SAYS HOW (v1.3.25). Through v1.3.24 this object carried `source_path` and `from_canonical` -- the notification service describing itself to the Executor, classified T (rows 24-25 of ACP-CLASS-001) because a description a service gives of itself is not evidence -- and an earlier revision of this description recorded why it could be nothing more: the notification was not among CR-1's signed structures, so there were no bytes to verify. There are now. `obj` is a Rendered Summary signed under the `notification` key that door_identities.json (PB-11) names in the signed bundle; the Executor verifies the signature under that key and compares `obj.proposal_hash` against its own canonical hash of the held Proposal (DR-14). Both self-descriptions are WITHDRAWN, and the rows move T -> B.\n\nWHY THE OBJECT IS A `$defs` ENTRY HERE AND NOT ITS OWN FILE. Two producers sign one shape -- the presentation service signs the approval summary, the notifier signs this -- and the generator resolves a `$ref` to a `$defs` entry only, never to a whole document (it halted on the alternative, which is the right answer: a document is a message and a message is not a field). The Acknowledgement carries its signed object the same way. The approval summary has no wire schema of its own because no clause puts it on a leg between two trust domains: it reaches the Executor from the presentation service on the leg the Attestation Objects already travel, in this shape.\n\nWHAT IS DELIBERATELY NOT A FIELD.\n(a) THE RECIPIENT SET. DR-3's audience is every attester recorded in the VERIFIED Attestation Objects plus the operator, both available to the Executor from the receipt it has already verified -- the operator inside the attestation signature rather than the receipt body (AT-8, Y4). A transmitted recipient set would be the notification service certifying its own coverage: RES-8, the shape DR-13(2) and PB-10 refused by putting audiences in the signed bundle. Disclosed asymmetry, unchanged: DR-13(2) puts the fast-path audience under signed policy and DR-3 does not, and `reference/src/acp_executor.py` asks the notifier for it on this path.\n(b) `delivered`. The notifier's report of whom it actually reached, consumed at DR-8. A return value on the way back to the Executor, not a field of this object, and the ONE T-32 row that stays T: a signed delivery report is still the party under verification describing its own coverage, and DR-14 states the bound rather than inventing a field that would look like closing it.\n(c) A THIRD SHAPE FOR THE DR-13 NOTICE. The register's artifact vocabulary holds `notification` (DR-3) and `notice` (DR-13), and they are two artifacts: the notice is committed by the Executor to its OWN durable audit state before an IRREVERSIBLE action executes below floor-HIGH, involves no rendering and no service, and its delivery is explicitly not a precondition of execution. ACP-86's register names this schema for `notice`; that is still not true of this file -- no tag discriminates the two, and DR-13(1)'s content appears in no field here -- and the disagreement is recorded rather than resolved, because resolving it is a decision about the register.\n\nENCODING. AT-8a pins canonical CBOR for the Attestation Object and §8 pins JCS for the Proposal; DR-14 pins the signature as taken over the canonical encoding of `obj` alone. The closed field sets here are Z4's reason -- an optional field gives one object two valid encodings -- and not a rule quoted from a clause.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "obj",
+    "sig"
+  ],
+  "properties": {
+    "obj": {
+      "$ref": "#/$defs/rendered_summary",
+      "description": "The signed Rendered Summary, `role` = `notification`. Carried in its own member rather than flattened beside the signature because the signature is taken over THIS map alone -- the Acknowledgement's shape, for the Acknowledgement's reason (ACK-2)."
+    },
+    "sig": {
+      "type": "object",
+      "description": "CR-2: a signature under a suite is a MAP from primitive name to signature value, one entry per primitive of the suite named in `obj.alg`. A bare scalar MUST NOT be accepted under any suite, not even a single-primitive one -- format leniency is a downgrade in disguise. OPEN MAP, deliberately: the suite registry lives in the signed bundle (CR-1) and CR-7 makes migration forward-only, so a closed `{classical, pq}` object here would hard-code one suite into the wire format. CR-3 is conjunctive and not expressible here: every primitive of the declared suite MUST verify and the supplied set MUST exactly match it, checked in code against `obj.alg` resolved through the bundle. Value encoding follows acknowledgement.schema.json's `sig`, whose description records that the two implementations of it disagree (WE-4 base64 vs the reference's hex) -- one report, not two.",
+      "propertyNames": {
+        "$ref": "https://acp.spec/schemas/bundle/signature.schema.json#/$defs/primitive"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "$defs": {
+    "rendered_summary": {
+      "x-acp-name": "RenderedSummary",
+      "description": "The SIGNED OBJECT a door produces during a deferred-release hold (DR-14): the human-readable summary of one action, bound to the canonical Proposal it was rendered from and to the role that rendered it. One shape, two producers -- the Attestation Presentation Service signs the approval summary under the `presentation` key and the notification service signs the Notification under the `notification` key, both named in the bundle's door_identities.json (PB-11). The Executor verifies each under the key for its role and compares each `proposal_hash` against its own canonical hash of the held Proposal.\n\nWHAT THE SIGNATURE DOES NOT PROVE. That `summary` is faithful to the bytes `proposal_hash` names. A compromised door signs whatever it renders; what it can no longer do is sign for the OTHER door, because it does not hold that key. Rendering honesty remains DR-2's structural requirement -- no shared rendering path, demonstrated at build time under conformance suite 3 -- and this object must not be read as though a signature supplied it.\n\nCLOSED FIELD SET, FOR Z4'S REASON: an optional field gives one summary two valid encodings. No nonce, on purpose: the object binds `proposal_hash`, a replay of it is the same summary for the same action, and DR-4/DR-5 key repudiation on the proposal, not on the summary.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "alg",
+        "role",
+        "proposal_hash",
+        "summary"
+      ],
+      "properties": {
+        "alg": {
+          "$ref": "https://acp.spec/schemas/bundle/signature.schema.json#/$defs/suite_id",
+          "description": "CR-1: the signature suite this object is signed under, inside the signed bytes. An unregistered suite fails closed."
+        },
+        "role": {
+          "$ref": "#/$defs/door_role",
+          "description": "Which door rendered this. Inside the signed bytes so the object says what it is: the Executor still resolves the key by the slot it expects (notification under `notification`, approval summary under `presentation`), and PB-11's distinctness means a summary signed for one slot cannot verify in the other -- but a signed object that does not name its own role is one whose meaning depends on where it was found, which is the two-encodings defect one step removed."
+        },
+        "proposal_hash": {
+          "$ref": "https://acp.spec/schemas/wire/attestation_object.schema.json#/$defs/sha256",
+          "description": "The canonical Proposal this summary was rendered from. The binding the object exists to carry: the Executor compares it against its OWN canonical hash of the Proposal being held, never against a transmitted value (TR-10's shape). This is also what DR-4's repudiation cites, which the unsigned notification of v1.3.24 could not name -- an earlier revision of this file reported that gap and did not patch it; DR-14 closes it."
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The human-readable summary DR-2 requires, rendered from the canonical Proposal bytes by the door named in `role`. §7.3 governs its content and this is the field most exposed to the model: the canonical Proposal carries parameters that passed validation and are still attacker-influenced, so whatever displays this string MUST treat it as DATA and never as markup -- an approver reading attacker-influenced prose is an injection target, and T-02 includes humans. Empty is refused (`minLength: 1`, this schema's reading): a summary with no content is a detection channel that is present and blank. No maximum, deliberately: an invented bound silently truncates a legitimate summary, which is a display lie manufactured by the schema. Named for the specification's word; `reference/src/acp_executor.py` called it `text` through v1.3.24."
+        }
+      }
+    },
+    "door_role": {
+      "x-acp-name": "DoorRole",
+      "description": "The two doors of deferred release. `presentation` is the Attestation Presentation Service (the approval path); `notification` is DR-2's independent path. DELIBERATELY NOT ORDERED: neither outranks the other, and the two-compromise argument needs both.",
+      "type": "string",
+      "enum": [
+        "presentation",
+        "notification"
+      ]
+    }
+  }
+}

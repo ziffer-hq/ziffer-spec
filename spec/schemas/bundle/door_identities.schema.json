@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acp.spec/schemas/bundle/door_identities.schema.json",
+  "title": "The two doors' signed identities: presentation and notification (ZIFFER-SPEC-001 §8.2, PB-11)",
+  "x-acp-name": "DoorIdentities",
+  "description": "Names the two services whose summaries the Executor consumes during a deferred-release hold, each with the verification keys its Rendered Summary objects (DR-14; notification.schema.json `$defs/rendered_summary`) are signed under. PB-11 (v1.3.25).\n\nWHY THIS FILE EXISTS. From v1.3.6 to v1.3.24 the Executor established DR-2's independence -- the notification path shares no rendering code with the approval path -- by comparing two labels the notification service chose (`source_path`) and reading a boolean it set (`from_canonical`). Both were classified T in ACP-CLASS-001 (rows 24-25, finding T-32): evidence about a service, produced by that service. A compromised notifier that rendered through the approval path, labelled itself otherwise and reported full delivery passed every check, and `reference/suites/class_findings.py` demonstrated it for thirteen revisions. The structural reason was recorded in notification.schema.json: the notification was not a signed structure, so there were no bytes to verify. This file supplies the keys those bytes are now verified under.\n\nWHY THE MECHANISM IS THE ATTESTER REGISTRY'S AND NOT A NEW ONE. Who may speak for a door is the same kind of value as who may attest (PB-6, PB-7), who is told (DR-13) and who is woken (PB-10): a service that names its own identity is certifying its own independence, RES-8. So the identities sit in signed policy under RK-5 two-person control, in the attester registry's key shape -- one Ed25519 and one ML-DSA-65 verification key, the same named scalars -- and the loader applies PB-7's distinctness rule across the two: compared over the COMPLETE suite, because two identities sharing a post-quantum key are not distinct, and treating them as such is CR-3's conjunctive guarantee undone at the registry instead of at the verifier.\n\nDISTINCTNESS FAILS CLOSED AT LOAD, AND JSON SCHEMA CANNOT SAY SO. `presentation` and `notification` are both required here, so an absent one is a schema violation as well as a PB-11 refusal; but 'the two share no key' is a relation across two values, and there is no keyword for it. As with PB-7 in attesters.schema.json the enforcement point is the loader: a bundle in which either key of one door equals the corresponding key of the other is refused at load by every consumer, on PB-1's footing. A normative rule with no enforcement point is a comment.\n\nWHAT A KEY HERE DOES NOT PROVE. A Rendered Summary that verifies under the `notification` key was produced by the holder of that key, for the proposal hash it names. That the prose is faithful to those bytes is DR-2's STRUCTURAL requirement -- no shared rendering path, demonstrated at build time under conformance suite 3 -- and no signature supplies it. A signature over a lie is a signed lie; what it can no longer be is a lie told by the other door.\n\nWHAT IS DELIBERATELY NOT HERE. Addresses, endpoints, channels: identities rather than routing, for notice_targets' and alert_targets' reason -- a routing detail changes without a policy review, and putting one under an offline signing key makes routine operations require RK-5. And no third role: the fast-path notice (DR-13) is committed by the Executor to its own state and involves no service, so it needs no identity.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "presentation",
+    "notification"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1"
+    },
+    "presentation": {
+      "$ref": "#/$defs/door",
+      "description": "The Attestation Presentation Service: the approval path, the door the attesters were shown the action through. Its key signs the approval summary the Executor compares against the notification at DR-14."
+    },
+    "notification": {
+      "$ref": "#/$defs/door",
+      "description": "The notification service: DR-2's independent path, the door the out-of-band summary reaches the attesters and the operator through. Its key signs the Notification (DR-3 leg). A summary that verifies under this key was not produced by the presentation service -- which is the whole of what deferred release needs the second door for."
+    }
+  },
+  "$defs": {
+    "door": {
+      "x-acp-name": "DoorIdentity",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "classical",
+        "pq"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "The identity's name, for the audit record and the alert. NOT what the Executor resolves a signature by -- ACK-4's rule applies here too: identity is what the signature verifies under, and this name is a label for the key beside it, never a way for a name to authorise itself."
+        },
+        "classical": {
+          "$ref": "https://acp.spec/schemas/bundle/attesters.schema.json#/$defs/ed25519_pub",
+          "description": "The door's Ed25519 verification key. The attester registry's named scalar, referenced rather than re-declared: one definition of a key encoding."
+        },
+        "pq": {
+          "$ref": "https://acp.spec/schemas/bundle/attesters.schema.json#/$defs/mldsa65_pub",
+          "description": "The door's ML-DSA-65 verification key. Both legs are required because CR-3 is conjunctive and the bundle's suite names both; a door registered with one leg would be a door whose summaries can never verify."
+        }
+      }
+    }
+  }
+}

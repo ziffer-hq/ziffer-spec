@@ -1,0 +1,86 @@
+ZIFFER SPECIFICATION LICENCE
+Version 1.0, 9 September 2026
+
+Copyright (c) 2026 code75 SASU. All rights reserved.
+ZIFFER is a registered trademark of code75 SASU.
+
+Licensor: code75 SASU, a French simplified joint-stock company with a sole
+shareholder, registered office 16 allee Pernette du Guillet, 75019 Paris,
+France, registered with the Paris Trade and Companies Register under number
+948 211 941.
+
+1. DEFINITIONS
+
+"Specification" means the documents, schemas, test vectors, conformance
+material and verifier source code published in this repository, at any
+version.
+
+"ZIFFER Artefact" means a proposal, decision receipt, policy bundle, audit
+record, anchor, notification or acknowledgement whose form is defined by the
+Specification.
+
+"Interoperating Software" means software whose purpose is to produce,
+consume or verify ZIFFER Artefacts in conformity with the Specification for
+use with the ZIFFER service, or to verify a decision receipt issued by it.
+
+2. GRANT
+
+Subject to this licence, code75 SASU grants you a worldwide, royalty-free,
+non-exclusive, non-transferable licence to:
+
+  (a) read the Specification;
+  (b) copy and redistribute the Specification verbatim, in whole or in part,
+      provided this licence and the copyright notice remain attached;
+  (c) implement the Specification in Interoperating Software, and run the
+      published vectors and conformance material against such software;
+  (d) use and modify the verifier source code within Interoperating
+      Software.
+
+3. RESTRICTIONS
+
+This licence does not permit you to:
+
+  (a) distribute a modified version of the Specification, or a document
+      derived from it, as a specification or standard;
+  (b) use the ZIFFER name or mark other than to state truthfully that
+      software interoperates with ZIFFER or conforms to a named version of
+      the Specification;
+  (c) operate, offer or distribute a service or product that performs the
+      decision function the Specification describes, namely grading
+      proposals against signed policy and issuing decision receipts, other
+      than as Interoperating Software used with the ZIFFER service;
+  (d) remove or alter this licence, the copyright notice or any provenance
+      record in this repository.
+
+4. PATENTS
+
+code75 SASU grants you a licence under those of its patent claims that are
+necessarily infringed by Interoperating Software, to the extent of section 2
+and no further. No other patent licence is granted, by implication or
+otherwise.
+
+5. EARLIER VERSIONS
+
+Versions of this work up to and including v1.3.19 were published under the
+name "ACP" under the Apache License, Version 2.0. Nothing in this licence
+restricts any right granted under that licence over those versions, and
+nothing in it extends that licence to any later version.
+
+6. NO WARRANTY
+
+THE SPECIFICATION IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL
+code75 SASU BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY ARISING FROM
+OR IN CONNECTION WITH THE SPECIFICATION OR ITS USE.
+
+7. TERMINATION
+
+Your rights under this licence end automatically if you breach it. They are
+reinstated if you cure the breach within thirty days of becoming aware of
+it. Sections 5 and 6 survive termination.
+
+8. GOVERNING LAW
+
+This licence is governed by the laws of France. The courts of Paris have
+exclusive jurisdiction.

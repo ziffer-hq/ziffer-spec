@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acp.spec/schemas/bundle/alert_targets.schema.json",
+  "title": "Alert recipients for every class of critical alert (ZIFFER-SPEC-001 §8.2, PB-10)",
+  "x-acp-name": "AlertTargets",
+  "description": "Maps each class of critical alert to the parties woken when one is raised. PB-10 (v1.3.23).\n\nWHY THIS FILE EXISTS. Twenty-odd sentences in ZIFFER-SPEC-001 end in 'with a critical alert' and, through v1.3.22, none said to whom. Every implementation therefore chose its own audience -- the notifier's configuration, the KMS's, the deployment's -- and a service that selects its own alert audience is certifying its own coverage: RES-8, and the exact shape of the still-open finding T-32 one component over. It surfaced while the KMS was built as a service, where every 'critical alert' sentence landed on a seam whose only implementation was a no-op (ACP-134).\n\nWHY THE MECHANISM IS notice_targets' AND NOT A NEW ONE. DR-13(2) already solved this problem for the fast-path notice: the recipient set is read from the signed bundle, keyed by class, inside policy_bundle_hash, and a class naming nobody fails closed because a notice with no addressee is not a detection channel. It is mutation-proven. Alerts take the identical mechanism -- two mechanisms for one problem is the two-definitions defect this repository has published corrections for three times -- and this file is notice_targets.schema.json with the key set changed.\n\nCOMPLETENESS FAILS CLOSED AT LOAD, AND JSON SCHEMA CANNOT SAY SO. PB-10 enumerates the alert classes and requires every one of them to name at least one recipient; a bundle missing any is invalid and MUST be refused at load by every consumer, on PB-1's footing. The list of classes is owned by the clause, not by this file -- a `required` list here would be a second definition of it -- so the enforcement point is the loader, as with PB-7 in attesters.schema.json. A normative rule with no enforcement point is a comment. Why load-time and not raise-time: a notice's 'fail closed' has an action to withhold, but an alert is raised on a path that has already failed, so refusing at raise time would withhold nothing. What can be withheld is the bundle: a deployment either names who is woken for each class, or it does not run.\n\nWHAT IS NOT DECIDED HERE: the transport of an alert (pager, queue, webhook) and what acknowledgement closes it. Those are deployment obligations in DR-12's shape -- silence as measurable debt -- and belong in ZIFFER-DEPLOY-001. Identities, not addresses, for notice_targets' reason: an address is a routing detail that changes without a policy review, and putting one under an offline signing key makes routine operations require RK-5.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "alert_targets"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1"
+    },
+    "alert_targets": {
+      "type": "object",
+      "description": "alert class -> recipient identities. Keys are the classes PB-10 enumerates (BUNDLE_INVALID, SIGNING_SUBSTRATE, RECEIPT_INVALID, RECOMPUTATION_MISMATCH, ATTESTATION_INVALID, LEDGER_REPLAY, SUITE_BELOW_FLOOR, DEFERRED_RELEASE, AUDIT_INTEGRITY, ATTESTATION_QUEUE_DEPTH, CONTEXT_STORE); the map is open here so that the clause, not this file, owns the list, and the loader refuses a bundle in which any of them is missing. Every value is a non-empty set: an empty array is REFUSED rather than read as 'wake nobody', because the two are indistinguishable at run time from an entry never written, and the fail-safe reading of both is refusal.",
+      "propertyNames": {
+        "minLength": 1,
+        "maxLength": 128
+      },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "uniqueItems": true,
+        "description": "Recipient identities, resolved by the deployment to actual channels. Identities rather than addresses, for the reason the file description gives.",
+        "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      },
+      "x-acp-absent": {
+        "clause": "PB-10",
+        "behaviour": "refuse",
+        "why": "an alert with no addressee is not a detection channel. PB-10 requires every class to be present at load, so a miss here means a loader skipped PB-10 -- and the generated accessor refuses rather than returning an Option a caller could unwrap_or_default() into silence. Same rule as notice_targets, and deliberately not a value default: there is no fail-safe recipient."
+      }
+    }
+  }
+}

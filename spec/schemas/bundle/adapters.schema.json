@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acp.spec/schemas/bundle/adapters.schema.json",
+  "title": "Registered ingress adapters: schema_id -> fidelity class (ZIFFER-SPEC-001 §6.1 FC-1, §8.4 step 2, §9.3 step 7 TR-8)",
+  "x-acp-name": "Adapters",
+  "description": "Maps each registered `schema_id` to the fidelity class of the ingress adapter that produces Proposals under it. This is the \"bundle-registered adapter binding\" §9.3 step 7 tells the Executor to verify `fidelity` against, and it is the last bundle table on the decision path to get a schema (ACP-73).\n\nA CONTROL INPUT, NOT METADATA. The value looked up here is bound into the EL-1 environment as `fidelity` (`acp_executor.py`, `recompute_risk`), so any `raise_to` clause can read it and it can raise or fail to raise a grade; FC-2 keys the confirmation requirement on it; and §9.3 step 7a makes disagreement between this table and the receipt's transmitted `fidelity` a CRITICAL ALERT (T-18), which the reference raises at `acp_executor.py`'s `execute` under TR-8. It is inside the bundle hash (`Bundle.hash`), so it is signed policy, and PB-4 makes it read-only to the runtime by cryptography.\n\nABSENCE IS REFUSED, NEVER DEFAULTED, AND JSON SCHEMA CANNOT SAY SO. The reference is `Bundle.recompute_fidelity`: a `schema_id` with no entry here raises `FailClosed(\"TR-8\", \"schema_id not bound to a registered adapter\")`, and the simulation's Policy Engine turns the same refusal into a DENY at §8.4 step 2 (`sim/policy.py`). The rule is carried by the `x-acp-absent` annotation below and GENERATED into the accessor in both languages, the `RiskFunctions` / `NoticeTargets` shape rather than the `Floors` / `Reversibility` default-value shape, because there is no fail-safe class to fall back to: defaulting to F-HIGH suppresses FC-2's confirmation exactly as a forged stamp would (X1), and defaulting to F-LOW looks conservative but is a policy value the implementation invented for an adapter nobody registered. P-4: unknown is refused. The WHOLE table is likewise required, not optional -- the reference `Bundle` dataclass gives `adapters` no default, so a bundle without it fails to construct rather than acquiring an empty registry that refuses every Proposal for a reason nobody wrote down.\n\nWHY A MAP AND NOT A ROW ARRAY. FC-1 says every adapter declares EXACTLY ONE fidelity class. A map keyed by `schema_id` cannot carry two classes for one id, so the schema enforces FC-1 by shape; an array of `{schema_id, fidelity}` rows would need the loader's duplicate-key refusal that `risk_functions.json` needs for `applies_to`.\n\nWHAT THIS SCHEMA FOUND. Until it existed the TR-8 refusal was a hand-written `if` in the Python reference and a hand-written `let ... else` in `crates/acp-decision` (ACP-45 slice 3, disclosed there rather than typed), and `tools/codegen.sh` emitted no type and no accessor for the one table whose miss suppresses a confirmation. It also found that §8.2's bundle tree names NO FILE for this binding: `floors.json`, `reversibility.json`, `notice_targets.json` and `risk_functions.json` are listed and `adapters.json` is not, although §9.3 step 7 and FC-1 both require the binding to be bundle-registered. The file name here follows its four siblings; the §8.2 listing is reported as a normative gap, not silently closed by this file. And the fidelity vocabulary had been declared in the WIRE root (`proposal.schema.json`) with no signed table to draw from -- the value the Executor compares a receipt against lived only on the side being verified. It is declared once, below, and the wire root now `$ref`s it, exactly as `Tier` and `SuiteId` are homed in `floors.schema.json` and `signature.schema.json` (ACP-78 M1).\n\nA-7 applies here as it does to floors and reversibility: that an adapter's declared class is HONEST is conceded unprovable. An F-LOW adapter registered as F-HIGH defeats FC-2 with zero attack, and no verifier can tell from this file. Registration is the governance task; this file is where that risk concentrates.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "adapters"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1"
+    },
+    "adapters": {
+      "type": "object",
+      "description": "schema_id -> fidelity class. Open map (schemas are deployment-specific), closed values. The key space is the Proposal's `schema_id` (SR-1's identifier half) and is `$ref`d rather than restated so the two spellings cannot drift; note that `tools/codegen.sh` resolves the `$ref` under `propertyNames` (it halts on one it cannot resolve, ACP-128) and carries its description into both languages' doc comments, but still emits map keys as plain strings, so the key constraint is documentary until a validator reads it (ACP-52).",
+      "propertyNames": {
+        "$ref": "https://acp.spec/schemas/wire/proposal.schema.json#/$defs/schema_id",
+        "description": "A registered `schema_id`, the same identifier a Proposal carries and the Executor looks this table up by (§9.3 step 7)."
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/fidelity_class"
+      },
+      "x-acp-absent": {
+        "clause": "TR-8",
+        "behaviour": "refuse",
+        "why": "a schema_id bound to no registered adapter is REFUSED, never defaulted. `fidelity` is readable by any raise_to clause and FC-2 keys confirmation on it, so there is no fail-safe class to fall back to: F-HIGH suppresses the confirmation requirement exactly as a forged stamp would (X1, T-18), and F-LOW is a policy value the implementation invented for an adapter nobody registered. A lookup returning `Option` here would let a caller write `unwrap_or_default()` and grade a Proposal from an unregistered ingress on a class nobody signed."
+      }
+    }
+  },
+  "$defs": {
+    "fidelity_class": {
+      "x-acp-name": "FidelityClass",
+      "type": "string",
+      "enum": ["F-HIGH", "F-LOW"],
+      "description": "F-HIGH: no free text reaches the Proposal; every field is a bounded scalar, constrained string, enum or fixed-shape nested model, so instruction injection into the Proposal is grammatically impossible. F-LOW: a translator model produced the Proposal from free text, injection into the TRANSLATION STEP is possible by construction, and containment rests on capability limits, confirmation and receipts -- never on ingress hygiene (FC-1, FC-3). Exactly one class per adapter.\n\nDELIBERATELY UNORDERED. There is no `x-acp-ordered` here and there must not be. The two classes are not ranked: FC-2 conditions on the class and requires confirmation for F-LOW at effective tier >= T2, which is a case distinction, not a comparison. An ordering invented for convenience would invite `>=` against a value that has no scale, which is the tier-versus-risk conflation this repository has already published a correction for -- and the names point the wrong way for a ladder, since here HIGH is the safer class.\n\nTHIS IS ALSO THE WIRE ROOT'S `FidelityClass` (ACP-73). It was declared in `spec/schemas/wire/proposal.schema.json` until this table existed, and `proposal`, `decision_receipt` and `audit_record` now `$ref` this declaration across roots rather than restating it, for the reason `SuiteId` is homed in `signature.schema.json`: TR-8 compares the receipt's transmitted `fidelity` against the class registered HERE, and two enums that merely look alike is that comparison passing on a vocabulary nobody checked. The signed side owns the vocabulary; the wire carries it."
+    }
+  }
+}

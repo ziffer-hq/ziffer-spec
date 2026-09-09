@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acp.spec/schemas/wire/audit_record.schema.json",
+  "title": "Audit Record (ZIFFER-SPEC-001 §11.1, AU-1 / AU-2 / SR-5)",
+  "x-acp-name": "AuditRecord",
+  "description": "VOCABULARY PINNED BY AU-9 (v1.3.27). `event_class` is one of seven values declared in `$defs/event_class`; every record carries `event_class`, `tenant_id`, `seq` and `occurred_at`; and each class carries EXACTLY the further fields §11.1's table names for it -- a `decision` record the twenty members this schema had always required, an `ingress_refused` record the four a door can know, an `execution` record the EX-2 `outcome` this schema had no place for. Every field below `seq` is therefore optional AT THE SCHEMA LAYER and required BY CLASS, and the consumer refuses a record whose set is not its class's before hashing it (AU-9), because JSON Schema cannot say `required when event_class is X` in a form this repository's generator has a rule for, and a consumer that hashed first and checked second would have chained a record it then refused. Until v1.3.27 this file was §11.1's decision record only: a door could not build one, nothing recorded what RAN, and the timestamp's key name and the class's value domain were both unpinned inside the AU-1 preimage -- so two conformant implementations wrote different chain hashes for identical histories (ACP-153, items 16-18; found by the first audit service).\n\nThe record of one pipeline event. Carried on leg F6.1 of the leg register (ZIFFER-DEPLOY-001 Annex A), Executor to Audit subsystem, cited there against AU-2. It is `record_n` -- the object AU-1 places inside the chain preimage -- and nothing else.\n\nWHY THIS IS A HASHED ARTIFACT AND NOT A LOG LINE. AU-1 (REVISED in v1.3.15): `chain_hash_n = H({\"prev\": chain_hash_{n-1}, \"record\": record_n})`, where §11.2 defines `H(x)` as the ASCII string `\"sha256:\"` followed by the lowercase-hex SHA-256 of `canonical(x)`, and `canonical()` is the single canonicaliser of AT-8a -- canonical CBOR, RFC 8949 §4.2. The record therefore sits INSIDE a hash preimage, so its field set and its key names are load-bearing in exactly the way AT-8b's are one artifact over. AU-1 says as much about its own two keys: *the key names are part of the preimage*. Two encodings of one event are two chain hashes, and from that link onward two honest parties hold two different chains.\n\nWHAT THAT COSTS WHEN IT GOES WRONG, WHICH IS NOT A LOST COMPARISON. AU-3a requires every anchor to be independently verifiable by any party holding the anchor public keys, and AU-4 makes a head that fails to extend a previously anchored head a CRITICAL INTEGRITY ALERT. So an encoding ambiguity in this object routes an honest third-party verifier into this system's own critical-alert channel with no attacker present. That is ACP-57 -- the correction recorded in §1 and at AU-1, where the clause specified a concatenation and `reference/src/acp_audit.py` had always hashed a two-key map, so AU-3a did not hold as written. ACP-57 was a defect in the clause immediately ABOVE this object. This schema is the field set the same defect would live in, one layer down.\n\nWHY THE FIELD SET IS CLOSED, AND WHERE THAT CLOSURE EXCEEDS WHAT §11.1 STATES. Every property below is REQUIRED and `additionalProperties` is false, because an optional field admits two canonical encodings of one event -- present-as-null and omitted -- which is Z4 read at the chain layer: not two ledger slots this time, but two chains, and the divergence surfaces as AU-4's critical alert against an honest party. AT-8b closes exactly this for the Attestation Object and L-26 records it as a limit; no clause closes it here.\n\nAND THE SPECIFICATION DOES NOT SUPPORT THE CLOSED READING. §11.1 requires *all relevant hashes*, and the word RELEVANT is the whole problem: it makes the field set vary by event class, the document enumerates neither the event classes nor which hashes are relevant to each, and it defines no representation for an absent value. A conditional field set is Z4; a closed one demands values a producer cannot always have (`raw_input_hash` at the Executor is the clean case -- see that property). This schema takes the closed reading because it is the only encoding-safe one, and records the gap rather than resolving it by invention. Until §11.1 pins either a per-event-class field set or an absent encoding, no schema for this object can be both closed and conformant.\n\n§11.1 IS ALSO NOT THE WHOLE RECORD ON ITS OWN TERMS. SR-5 adds the `(schema_id, schema_version, schema_hash)` triple and the fidelity class to every audit record; B-2 requires every model-call record to assert that provider-side tool features were disabled; EX-3 requires a verification-failure record to carry the offending receipt; DR-11/L-29 require the confirmation-sampling draw to be recorded in audit; DR-12/L-30 require the unacknowledged-release counter to be. Five clauses add record content that §11.1 does not list. The SR-5 triple is below because it is stated of every audit record; the other four are event-class-specific and are named here rather than guessed at.\n\nWHAT IS NOT A FIELD. `chain_hash` and `previous_hash` are AU-2's STORAGE constraints on the row the receiver writes, not content of the record the sender sends: the receiver computes them per AU-1 after this object arrives (F6.1 carries the record, F6.2 carries the `chain_hash`). A record carrying its own chain hash would be self-referential, and a record carrying its own `previous_hash` would let the audited party name its own link -- the audited party supplying the evidence of its own position, RES-8 with the writer as the source. AU-8's tenant-creation record is likewise not this object: it is a four-key map `{tenant_id, created_at, bundle_epoch, schema_version}`, anchored immediately on tenant creation, and modelling it here would put two objects in one schema. The anchor (AU-3) is a third artifact on legs F6.3/F6.4. `audit_id` is absent because §11.1 does not list it, even though §9.2's receipt carries one and R-1 returns one to a rejected caller.\n\nWHAT THIS SCHEMA DOES NOT CONSTRAIN, STATED SO THE CLAIM IS NOT READ WIDER THAN IT IS. Every ordering property is invisible here. AU-7 anchor-before-release, AU-2's UNIQUE and GAPLESS `(tenant_id, seq)` and its SERIALIZABLE or single-writer-per-tenant discipline, AU-6's outage behaviour, AC-5's count-at-release, and all eight §11.3 reconciliation checks are properties of a SEQUENCE of records and of the writer's discipline. No instance check can see one of them: a schema-valid record says nothing about whether it was anchored before its action was released. They are per-implementation obligations (`spec/vectors/OBLIGATIONS.md`) exercised in `reference/suites/audit_suite.py`, and a conformance claim resting on this schema is a claim about shape only.\n\nSUITE 12 CLASSIFICATION. Every field below is class T at the schema layer, and no consumer may promote any of them. An audit record is testimony produced INSIDE the production trust domain -- the domain §11.3 places under suspicion when it puts reconciliation in the anchor-verifier's domain (AU-4) -- so a control input read from here would be the RES-8 defect with the audited party as the source. §9.2's authority note already says `risk_level_effective`, `risk_level_floor_only` and `fidelity` are diagnostic and audit fields only, and TR-8 requires the Executor to recompute floor-only risk from the signed bundle and the canonical Proposal. Reconciliation checks this record against ANCHORS and the CONSUMPTION LEDGER, never against itself.\n\nENCODING. Canonical CBOR, RFC 8949 §4.2, via §11.2's `H` and AT-8a's single canonicaliser. The JSON here is the diagnostic form the schema is written against, never an accepted input.\n\nNO `x-acp-absent` APPEARS BELOW, DELIBERATELY. No clause declares a fail-safe default for a missing audit-record field. Inventing one would let an unparseable record be silently completed and chained, which is the opposite of what a tamper-evidence chain is for: P-4's default-DENY is about policy evaluation and does not reach record parsing.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_class",
+    "tenant_id",
+    "seq",
+    "occurred_at"
+  ],
+  "properties": {
+    "event_class": {
+      "minLength": 1,
+      "maxLength": 2048,
+      "description": "The class of pipeline event this record is of (§11.1, first item). It is what makes §11.1's *all relevant hashes* even readable -- relevance is relevance TO AN EVENT CLASS -- so it is the field the rest of the record's conditionality would hang from.\n\nTHE VALUE DOMAIN IS AU-9's (v1.3.27): `ingress_refused`, `decision`, `verification_failed`, `hold`, `notice`, `release`, `execution` -- one per pipeline event the flow register puts a record on (F1.1, F6.1, DR-1, DR-13, DR-7/9/10/12, EX-2, EX-3). Through v1.3.26 no clause enumerated it, and this repository held three vocabularies for one field: the reference's `type` with `hold`/`release`, an AU-1 suite case's `event`, and §11.1's words. The consequence was not cosmetic: AU-1 hashes this record, so different strings for one event were different chain hashes for identical histories, and AU-3a's independent verifier could recompute neither. The reference now writes THIS key with THESE values, and AU-9 makes a value outside the set a refusal rather than a fourth vocabulary.",
+      "$ref": "#/$defs/event_class"
+    },
+    "tenant_id": {
+      "$ref": "https://acp.spec/schemas/bundle/manifest.schema.json#/$defs/tenant_id",
+      "description": "The tenant whose chain this record extends. §11.1 lists *tenant*; AU-1 makes chains PER-TENANT, AU-2 keys uniqueness and gaplessness on `(tenant_id, seq)`, and AU-8 puts `tenant_id` in the genesis preimage, so the identifier is the specification's own and not a name coined here.\n\nIT NAMES A CHAIN AND DOES NOT SELECT ONE (RES-8). A receiver that resolves WHICH chain to append to from this field has let the writer choose its own history; D-1 gives every tenant dedicated per-tenant executor credentials and schemas precisely so the authenticated connection is what answers. Carried anyway, because it is inside the AU-1 preimage: a record whose tenant is implicit at write time and explicit at verification time is one event with two encodings, and the chain would not survive that."
+    },
+    "session": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048,
+      "description": "The session the event occurred in (§11.1, third item). The specification uses the bare word `session` in exactly one other place that types it at all -- §8.5's accumulator `group_by` lists `[\"operator\",\"session\"]` -- so the key name here is that word and no other. It is load-bearing beyond forensics: §4.2 scopes cross-session persistence OUT of the accumulator model (*fresh session credentials reset session-scoped accumulators*), which makes the session boundary an attacker-visible reset, and the audit record is the only place a reconciler can see how an operator's activity was partitioned across sessions.\n\n`maxLength` is L-04. No format is pinned because no clause pins one."
+    },
+    "operator": {
+      "$ref": "https://acp.spec/schemas/wire/attestation_object.schema.json#/$defs/operator_id",
+      "description": "The operator the event is attributed to (§11.1, fourth item; §8.5 groups accumulators by the same key). It is the principal AT-2 approver-distinctness and DR-9 acknowledgement are stated about, and the principal AC-5's deny-effect accumulators can lock out -- which is why W1 mattered: counters inflated by Decisions that never executed are a targeted lockout of a legitimate operator.\n\nTHIS IS A RECORD OF AN ATTRIBUTION, NOT THE ATTRIBUTION ITSELF. The authoritative operator identity for approver-distinctness and the §9.3 step-9 capability recheck is `attestations[].obj.operator`, which is signature-covered (Y4); §9.2 says in as many words that the receipt's top-level `operator` is diagnostic only. An audit record is one level further from the signature than that receipt field, so nothing may key a control decision on this value."
+    },
+    "fidelity": {
+      "$ref": "https://acp.spec/schemas/bundle/adapters.schema.json#/$defs/fidelity_class",
+      "description": "The fidelity class of the adapter the event descends from. Required twice over: §11.1 lists it in the record, and SR-5 states that every Atom, Proposal, Decision and audit record carries the `(schema_id, schema_version, schema_hash)` triple AND the fidelity class.\n\nWHY IT IS AUDITED AT ALL. FC-1 makes the class the difference between injection being grammatically impossible (F-HIGH) and containment resting entirely on capability limits, confirmation and receipts (F-LOW), and FC-2 lets policy condition on it. A receipt asserting `fidelity: \"F-HIGH\"` for a Proposal from an F-LOW-bound adapter MUST fail closed with a critical alert (§14 suite 3), which is possible only because the true class is recorded somewhere the adapter binding can be reconciled against. The key name is §9.2's receipt field name `fidelity`; §11.1's phrase is *fidelity class*."
+    },
+    "schema_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048,
+      "description": "First member of SR-5's triple, which every audit record carries. The triple is what lets a replayed Decision be re-derived against the schema that actually admitted the input: §11.3(e) re-derives sampled Decisions by replay and calls a mismatch critical, and SR-6 retires schemas after 180 days, so a record naming only a version would become unresolvable. Same key name as §9.2's receipt field."
+    },
+    "schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048,
+      "description": "Second member of SR-5's triple. Carried beside `schema_hash` rather than instead of it because a version is a NAME for a schema and the hash is the evidence of which bytes were used -- SR-3's narrowing rules move the admissible set between versions, so a replay that trusted the version alone would re-derive against a different grammar than the one that ran. No format is pinned; no clause pins one."
+    },
+    "schema_hash": {
+      "$ref": "https://acp.spec/schemas/wire/attestation_object.schema.json#/$defs/sha256",
+      "description": "Third member of SR-5's triple, and the only member of it that is evidence rather than a label. §8.4 step 1 admits a Proposal only against a `(schema_id, version, hash)` valid in the bundle, so this is the value that ties the recorded event to bundle-attested bytes."
+    },
+    "raw_input_hash": {
+      "$ref": "https://acp.spec/schemas/wire/attestation_object.schema.json#/$defs/sha256",
+      "description": "The hash of the external input the event descends from (§11.1, first of the enumerated hashes).\n\nTHIS FIELD IS WHERE §11.1 AND LEG F6.1 CONTRADICT EACH OTHER, AND THE CONTRADICTION IS RECORDED RATHER THAN SMOOTHED. `raw_input_hash` occurs exactly ONCE in ZIFFER-SPEC-001 -- in §11.1's own sentence -- and no clause says what it covers, at which point of §5.1's flow it is taken, or under which canonicalisation. For an F-LOW adapter the raw input is free text, so *canonical* has no meaning for it at all. Worse for this leg: the Executor never sees the raw input (§5.1 puts the Ingress Adapter and the validators upstream of the Policy Engine, and D-2 gives the model path no route to the Executor segment), and neither §9.2's receipt nor the canonical Proposal carries the value -- so an Executor writing an F6.1 record can only forward a number it was handed, class T with no verifier anywhere on the path, or omit it and split the encoding (Z4 at the chain layer). The specification supports neither. Kept in the schema because §11.1 states it unconditionally, and flagged because writing the field down is what made the contradiction visible."
+    },
+    "proposal_hash": {
+      "$ref": "https://acp.spec/schemas/wire/attestation_object.schema.json#/$defs/sha256",
+      "description": "The canonical Proposal (B-1a) the event is about (§11.1). It is the join key for most of §11.3: (a) matches execution records to receipts, and DS-6f pins one immutable `proposal_hash -> origin_nonce` binding per Proposal in the Consumption Ledger with INDEFINITE retention, which the reconciler reads from the ledger and never from a record like this one. Canonicalisation for the Proposal is JCS (RFC 8785) per WE-1/WE-2, not the CBOR that encodes this record -- the two canonicalisers coexist by artifact, and mixing them is the encoding split AT-8a exists to prevent."
+    },
+    "policy_bundle_hash": {
+      "$ref": "https://acp.spec/schemas/wire/attestation_object.schema.json#/$defs/sha256",
+      "description": "The signed bundle in force for the event (§11.1). Recorded so a Decision can be re-derived (§11.3(e)) against the exact policy that produced it: PB-1 expires bundles and §8.2 rules move, so a record naming only an epoch would be replayable only while that bundle survived."
+    },
+    "bundle_epoch": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "The epoch of that bundle (§11.1). §11.3(d) reconciles every signing event against a `bundle_epoch` greater than or equal to all prior epochs, which is the rollback detection, and L-24 makes the epoch a strictly increasing integer that is never reused.\n\nDETECTION HERE, ENFORCEMENT ELSEWHERE (RES-8). Monotonicity is enforced at the KMS against a durable high-water mark (RAD-3) with indefinite retention in the ledger (CL-4), never from an audited value: an epoch read back from the chain the production domain writes would let a compromised writer lower its own high-water mark. `minimum: 0` is the type's floor, matching AU-8's genesis record, which carries an epoch before any signing event exists."
+    },
+    "context_snapshot_hash": {
+      "$ref": "https://acp.spec/schemas/wire/attestation_object.schema.json#/$defs/sha256",
+      "description": "The Context read the Decision was computed over (§11.1; §8.8 `snapshot_hash()`). Recorded because the Context Store is adversarial in this threat model -- §8.3.2 leaves it able to raise tier or withhold capability facts -- so re-deriving a sampled Decision (§11.3(e)) requires knowing which snapshot was read, and INV-1-MEDIUM's disclosed residual is only investigable against a pinned snapshot."
+    },
+    "receipt_nonce": {
+      "$ref": "https://acp.spec/schemas/wire/attestation_object.schema.json#/$defs/nonce128",
+      "description": "The nonce of the Decision Receipt the event is about (§11.1, *receipt nonce*; the receipt's own field name in §9.2 is `nonce`, and §11.1 does not say which spelling belongs in the record).\n\nWHY IT IS IN THE RECORD. It is the identity a receipt is consumed under: CL-2/CL-3 consume receipt nonces once against the linearizable ledger, §9.3 step 6 claims it atomically, and DS-6a makes the FIRST receipt's nonce the `origin_nonce` half of `action_id = (proposal_hash, origin_nonce)`. §11.3(a) reconciles every execution record against exactly one valid receipt, and orphan executions are critical -- that check needs this value in the record.\n\nAND IT IS THE FIELD THAT MAKES THE CLOSED READING UNSATISFIABLE. A pattern-constrained string has no empty encoding, so an event class with no receipt -- an ingress rejection under R-3, a model call under B-2 -- cannot produce a schema-valid record without one, and no clause supplies an absent form. `attestation_ids` escapes the same problem only because an empty ARRAY is a single well-defined canonical encoding while an absent field is two readings. Size is L-17's 128 bits; type is WE-4."
+    },
+    "attestation_ids": {
+      "type": "array",
+      "minItems": 0,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "https://acp.spec/schemas/wire/attestation_object.schema.json#/$defs/sha256"
+      },
+      "description": "The `attestation_id`s of the Attestation Objects the event consumed (§11.1, *attestation IDs*). Each is SHA-256 over the canonical CBOR encoding of the whole object (AT-1, AT-8a), RECOMPUTED by the Executor at §9.3 step 7b(v) and never taken as transmitted -- transmitting the id for trust is what v1.3.2 did and what Y1 broke. So the values here are a record of a recomputation, which is the only kind of derived value an audit record may honestly carry.\n\nWHY IT MATTERS THAT THEY ARE RECORDED. §11.3(c) reconciles every `attestation_id` against exactly one receipt and at most one execution -- the check whose absence permitted T-14, attestation amplification. A reconciler running outside the production domain (AU-4) can only perform it against records that name the ids.\n\nTHESE ARE NOT `attestation_digests`. Under receipt version 3 (§8.6b, AB-1) the receipt commits to entry digests taken over the whole entry -- object, `kind`, `attester` and `sig` together -- while an `attestation_id` is over the object alone. Two different values over overlapping bytes; recording the wrong one makes §11.3(c) silently compare nothing.\n\nAN EMPTY ARRAY IS THE CORRECT ENCODING FOR AN EVENT THAT CONSUMED NO ATTESTATION, and it is deliberately not modelled as an absent field: `[]` has one canonical CBOR encoding, an omitted key has two readings, and two readings is the chain divergence this schema exists to prevent. `uniqueItems` because one attestation appearing twice in one record is one approval counted twice, which is T-14 in miniature."
+    },
+    "risk_level_floor_only": {
+      "$ref": "https://acp.spec/schemas/bundle/risk_functions.schema.json#/$defs/risk",
+      "description": "The floor-only risk the Policy Engine computed (§11.1, *floor-only and effective risk*; the key name is §9.2's receipt field). Floor-only means derived from the SIGNED BUNDLE's tier floors and rules, with no Context-asserted raise folded in -- §8.3.2's separation, which is what keeps a compromised Context Store from suppressing escalation (TR-4, `FloorDominance`).\n\nDIAGNOSTIC AND AUDIT ONLY, IN THE SPECIFICATION'S OWN WORDS. §9.2's authority note classifies this field non-authoritative in the receipt, and TR-8 requires the Executor to RECOMPUTE it from the signed bundle and the canonical Proposal; a transmitted value disagreeing with the recomputation is a critical alert at §9.3 step 7a. That history is why the note exists: v1.3.0 keyed the Executor's quorum requirement on the receipt's value, so one compromised KMS could sign a floor-T3 action as `LOW` with no attestations and defeat INV-1-HIGH. A value one hop further from the signature must not be treated any better."
+    },
+    "risk_level_effective": {
+      "$ref": "https://acp.spec/schemas/bundle/risk_functions.schema.json#/$defs/risk",
+      "description": "The effective risk -- floor composed with Context-asserted raises and accumulator effects (§8.4, §8.5) -- recorded beside the floor-only value because §11.1 requires BOTH. Recording only one loses the ability to reconstruct why an action attested: the pair is the evidence of which side raised it, and a raise that appears in the effective value and not the floor is a Context Store claim rather than a bundle rule. Diagnostic and audit only, per §9.2's authority note."
+    },
+    "decision": {
+      "$ref": "https://acp.spec/schemas/wire/decision_receipt.schema.json#/$defs/decision_outcome",
+      "description": "The disposition the Policy Engine reached (§8.4 step 11; §5.1's flow renders the engine's output as `ALLOW/ATTEST/DENY`; §9.2's receipt field carries the same name).\n\nTHIS IS THE ONLY MEMBER OF §11.1'S *Decision fields* THIS SCHEMA PINS, AND THE REST IS AN OPEN QUESTION RATHER THAN AN OMISSION. §11.1 says *Decision fields* and enumerates none. §9.2's receipt body carries a dozen candidates -- `rule_id`, `receipt_version`, `issued_at`, `expires_at`, `idempotency_key` among them -- and guessing which of them §11.1 meant would be this schema legislating where the specification is silent, which is how a second definition of one object gets created. Only the disposition itself is taken, because it is the one field both §8.4 and §9.2 name as THE Decision.\n\n`DENY` is included on P-4's authority as much as step 11's: no matching rule, unknown capability, unclassified resource or unavailable Context Store each resolve to DENY with a distinct reason code, and R-3 requires every rejection to produce an audit record -- so a record that could not express a refusal would leave the entire fail-closed path unauditable."
+    },
+    "seq": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "The monotonic sequence number of this record within its tenant's chain (§11.1, last item). AU-2 makes `(tenant_id, seq)` UNIQUE and GAPLESS, with inserts appending under SERIALIZABLE or single-writer-per-tenant discipline.\n\nWHY THE MINIMUM IS 1 AND NOT 0. AU-8 defines `chain_hash_0` over the tenant-creation record, and AU-1 pairs `chain_hash_n` with `record_n`, so index 0 is genesis and the first pipeline event is n = 1. The tenant-creation record is a different object (see this schema's description) and never appears here.\n\nIT NAMES A POSITION AND IS NOT EVIDENCE OF ONE (RES-8). Gaplessness and uniqueness are properties the WRITER enforces under AU-2's own discipline; a receiver that appends at the sequence number its sender chose has let the sender place its own link, and a chain whose positions are supplied by the party under audit is not tamper-evident. The value is carried because §11.1 puts it in the record and AU-1 hashes the record -- but the receiver assigns and verifies it.\n\nRESOLVED IN v1.3.28 (ACP-164): WRITER PROPOSES, RECEIVER VERIFIES. The finding this paragraph used to record was that the reference refused a writer-supplied `seq` and stamped its own, while this schema makes the field REQUIRED -- so the generated `AuditRecord`, which types `seq` as a required integer, could not express a message the reference would accept, and no F6.1 vector could satisfy both. The resolution is the compare-and-retry shape ziffer's audit service already shipped for three concurrent writers per chain: the writer names the position it believes is next, and `AuditChain.append` refuses a mismatch under AU-2 with the EXPECTED position in the refusal, which is the whole retry protocol. The receiver still decides -- it never appends AT the writer's number, it refuses unless that number is the one it was about to assign -- so the RES-8 paragraph above survives unchanged: naming the right position gains a writer nothing, and naming any other gains it a refusal. The preimage is the record as written, `seq` included."
+    },
+    "occurred_at": {
+      "$ref": "https://acp.spec/schemas/wire/attestation_object.schema.json#/$defs/rfc3339_instant",
+      "description": "RFC 3339 instant at which the event occurred, in the rendering §9.2 uses for `issued_at` and `expires_at`.\n\nTHE CLAUSE THAT REQUIRES IT IS NOT §11.1, AND THAT IS THE POINT. §11.1's record content lists NO timestamp. §11.3(g) nonetheless reconciles every floor-HIGH execution record against *an anchor covering it, dated at or before release* -- a comparison the reconciler makes from outside the production trust domain (AU-4), where the record and the anchor are the only two things it can read. Without a time in the record the AU-7 enforcement check has nothing to compare the anchor's date against, and AU-7 is what closed W3, the pre-anchor rewrite gap. `reference/src/acp_audit.py` carries the value under the key `at` and `reconcile()` compares `a[\"at\"] > r[\"at\"]` exactly as described.\n\nTHE KEY NAME IS `occurred_at`, PINNED BY AU-9 (v1.3.27). The reference carried this value under `at`, and the anchor's date under `at` beside it; both are renamed to the names the wire schemas already used (`occurred_at` here, `anchored_at` in anchor.schema.json), because an unpinned key name for a required value inside the AU-1 preimage was a chain divergence waiting to happen.\n\nEVALUATED AGAINST NTS-DISCIPLINED WALL TIME within the L-20 skew allowance (§12.5, leg F9.1), never a monotonic clock: an anchor and a record are dated by different processes, and only wall time is comparable across them."
+    },
+    "outcome": {
+      "$ref": "#/$defs/outcome",
+      "description": "What happened, on the records AU-9 puts it on: an `execution` record carries EX-2's `executed`, `failed`, `not_attempted` or `indeterminate` (§9.5 -- `indeterminate` is what DS-3's reconciliation is keyed on, and it is a value here because a chain that cannot say an outcome was unknown cannot answer §11.3 (f)); a `release` record carries `executed` or `refused` (DR-7, DR-9, DR-10). Absent on every other class. Through v1.3.26 nothing in the record said what ran, so §11.3 (a) orphan executions, (f) indeterminate outcomes and (h) released executions could not be answered from a chain written in this vocabulary (ACP-153, item 17)."
+    },
+    "recipients": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 100,
+      "items": {
+        "$ref": "https://acp.spec/schemas/wire/attestation_object.schema.json#/$defs/operator_id"
+      },
+      "description": "On a `notice` record: who the signed bundle's `notice_targets.json` names for the action class (DR-13), as committed BEFORE execution. At least one, because DR-13 refuses to execute where the bundle names none -- a notice with no addressee is not a detection channel -- and a record that could carry an empty set would be that refusal written down as success."
+    },
+    "acknowledged_by": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "$ref": "https://acp.spec/schemas/wire/attestation_object.schema.json#/$defs/operator_id"
+      },
+      "description": "On a `release` record: the notified parties whose acknowledgements the Executor verified (ACK-1..6) before releasing. EMPTY for a silent release, and DR-12's per-tenant counter is the count of `release` records whose set is empty -- recorded in audit, as the clause requires, by being derivable from it rather than by a counter field a writer could set."
+    },
+    "clause": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 32,
+      "pattern": "^[A-Za-z0-9.]{1,12}-[0-9]{1,3}[a-z]?(\\([a-z-]{1,8}\\))?$",
+      "description": "On an `ingress_refused` or `verification_failed` record: the clause id the refusal fired under -- `B-6`, `V-1`, `9.3-7b(ii)` -- in the spelling `tools/clauses.py` indexes. It is the join key between a chain and the specification: an auditor reading `verification_failed` records grouped by clause is reading the threat table's countermeasures firing, which is what EX-3 puts the record there for."
+    },
+    "correlation_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "On an `execution` record: the target system's correlation identifier for the invocation (EX-2's `target correlation IDs`), so an `indeterminate` outcome can be resolved against the target's own record of what it did (DS-3). Opaque here; its meaning is the target's."
+    }
+  },
+  "$defs": {
+    "event_class": {
+      "x-acp-name": "AuditEventClass",
+      "type": "string",
+      "enum": [
+        "ingress_refused",
+        "decision",
+        "verification_failed",
+        "hold",
+        "notice",
+        "release",
+        "execution"
+      ],
+      "description": "AU-9's seven event classes, in pipeline order: a door refusing a submission (F1.1), a Decision passing or failing §9.3 (F6.1), a receipt refused at the Executor with the offending receipt attached (EX-3), a floor-HIGH action held (DR-1), an irreversible below-HIGH action's notice committed before execution (DR-13), a held action released or refused (DR-7/9/10, counted under DR-12), and what the target reported (EX-2)."
+    },
+    "outcome": {
+      "x-acp-name": "AuditOutcome",
+      "type": "string",
+      "enum": [
+        "executed",
+        "failed",
+        "not_attempted",
+        "indeterminate",
+        "refused"
+      ],
+      "description": "EX-2's four execution outcomes, plus `refused` for a `release` record whose DR-* check failed closed. Which values a class admits is §11.1's table, enforced by the consumer under AU-9; the enum is the union so one type serves both records."
+    }
+  }
+}

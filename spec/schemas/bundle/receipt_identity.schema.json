@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://acp.spec/schemas/bundle/receipt_identity.schema.json",
+  "title": "The receipt signing identity the bundle names (ZIFFER-SPEC-001 §8.2, PB-12)",
+  "x-acp-name": "ReceiptIdentity",
+  "description": "The tenant's receipt verification keys -- the public half of the `receipt_signing_key` the KMS holds (§4, EX-4) -- one per primitive of the bundle's suite, named by the signed bundle. PB-12 (v1.3.27).\n\nWHY THIS FILE EXISTS. §9.3 step 1 has read, since v1.3.0, `Signature valid under the current receipt_signing_key (public key from the signed bundle)`, and §8.2's tree named no member that could carry it. Every implementation therefore took the key from somewhere else: the Python reference held it as a field of its modelled bundle (and hashed it there, so `policy_bundle_hash` covered a value the on-disk tree did not), the Rust differential passed it in beside the bundle, and the first Executor process (M7) would have read it from its own configuration -- a verifier trusting its deployment's description of the party it verifies, which is the T-32 shape one level below the bundle. This file is the member step 1's words had always assumed, and the on-disk tree now covers what the reference's hash already did.\n\nWHY THE MECHANISM IS THE DOORS' AND THE REGISTRY'S. Who signs receipts is the same kind of value as who may attest (PB-6, PB-7) and who speaks for a door (PB-11): an identity a runtime component supplied about itself would be RES-8. So it sits in signed policy under RK-5 two-person control, in the attester registry's key shape -- one Ed25519 and one ML-DSA-65 verification key, the same named scalars -- and both legs are REQUIRED because CR-3 is conjunctive: a receipt key registered with one leg is a key under which no receipt can ever verify.\n\nWHAT THE LOADER CHECKS, AND WHAT IT DELIBERATELY DOES NOT. Present, both legs at their declared lengths, and the classical leg not a small-order point (PB-9's rule, the same predicate the registry and the doors are held to) -- else the bundle is refused at load by every consumer, on PB-1's footing, under one name (`ReceiptIdentityAbsent` for a member that is missing, one leg short or not a key). NO distinctness bar against the attester registry or the two doors, and that is a decision rather than an omission: at any k >= 2 a KMS that also held one attester key still needs a second approver, so INV-1-HIGH is not broken by that component alone and the bar would remove no compromise while dressing an arbitrary rule as a control -- the reference has recorded that reasoning beside its door check since PB-11 landed, and it applies unchanged here. EX-4's rule that no component HOLDS private keys from more than one class is custody, enforced at the KMS and not by comparing public keys in a file.\n\nWHAT THE KMS DOES WITH IT. §9.1.1 step 4: the KMS compares the identity it holds for the tenant against this member of the bundle it independently verified, and answers `SIGNING_DENIED` on a mismatch -- RAD-5's shape (the bundle and the signer agree, and the bundle is the byte the ceremony covered) applied to the key rather than to the tenant. A bundle that names a key the KMS does not hold is a bundle under which nothing will ever be signed, and refusing at the signer says so where an operator can read it instead of at the Executor's step 1 at 03:00.\n\nWHAT IS DELIBERATELY NOT HERE. Custody metadata: the tier the key is held at is the manifest's `custody` (§4) and belongs beside the epoch, not beside the key. Rotation: a new receipt identity is a new bundle epoch (PB-5), which is what makes the old key's receipts refuse at step 4 before they can fail at step 1.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "name",
+    "classical",
+    "pq"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "description": "The identity's name, for the audit record and the alert -- a label for the keys beside it, never what the Executor resolves a signature by (ACK-4's rule, as for the doors)."
+    },
+    "classical": {
+      "$ref": "https://acp.spec/schemas/bundle/attesters.schema.json#/$defs/ed25519_pub",
+      "description": "The Ed25519 verification key. The attester registry's named scalar, referenced rather than re-declared: one definition of a key encoding. Held to PB-9 at load: a small-order point here is a key under which one signature verifies every message."
+    },
+    "pq": {
+      "$ref": "https://acp.spec/schemas/bundle/attesters.schema.json#/$defs/mldsa65_pub",
+      "description": "The ML-DSA-65 verification key. Required because CR-3 is conjunctive and the bundle's suite names both primitives; a receipt verifies only when every leg does."
+    }
+  }
+}

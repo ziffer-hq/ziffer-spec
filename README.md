@@ -2,12 +2,13 @@
 
 ZIFFER is a decision service for AI agents. An agent proposes an action, ZIFFER grades it against signed policy, and the executor on the customer's side runs it only on a verified decision receipt. This repository is the specification of that contract: the rules, the wire formats and the test vectors. It exists so that a party who does not trust ZIFFER can check a receipt without asking ZIFFER anything.
 
-Published from engine commit `cdccfa38754e5c62620ea9f2410ff89cb7715022`. `PROVENANCE.json` lists every file with its hash. This repository is generated; it takes no pull requests. Findings go to hello@ziffer.io.
+Published from engine commit `8ce54803e0cc7f1a27bd2654bf8c3c144f8ee834`. `PROVENANCE.json` lists every file with its hash. This repository is generated; it takes no pull requests. Findings go to hello@ziffer.io.
 
 ## Contents
 
 - `spec/ZIFFER-SPEC-001.md`: the decision rules, encodings and the executor's verification checklist.
 - `spec/ZIFFER-DEPLOY-001.md`: trust domains, key custody, deployment profiles.
+- `release-key.pub`: the Ed25519 public key that signs every release of the `ziffer` CLI. A release on this repository's Releases page carries `SHA256SUMS` and `SHA256SUMS.sig`; verify with `openssl pkeyutl -verify -pubin -inkey release-key.pub -rawin -in SHA256SUMS -sigfile SHA256SUMS.sig` before trusting a checksum. The key is published here, beside the specification, so it is never fetched from the release it verifies.
 - `spec/schemas/`: the policy bundle schemas and the wire message schemas. Every type in the product is generated from these.
 - `spec/vectors/`: the conformance vector classification and the per-implementation obligations.
 

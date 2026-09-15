@@ -1,6 +1,6 @@
 # Vector classification — which suite cases can become shared data, and which cannot
 
-**Against ZIFFER-SPEC-001 v1.3.31 · 140 cases across four suites · ACP-1 (VEC-1)**
+**Against ZIFFER-SPEC-001 v1.3.32 · 140 cases across four suites · ACP-1 (VEC-1)**
 
 This file classifies every case in the four suites that a shared vector corpus could
 plausibly cover. It is the derivation behind [`OBLIGATIONS.md`](OBLIGATIONS.md); read that

@@ -47,10 +47,9 @@
     },
     "required_roles": {
       "type": "array",
-      "minItems": 1,
       "uniqueItems": true,
       "items": { "type": "string", "minLength": 1, "maxLength": 128 },
-      "description": "Attester roles the rule demanded. `uniqueItems` because a repeated role is a second spelling of one requirement, and two spellings of one thing is the defect this repository is built around."
+      "description": "Attester roles the rule demanded. `uniqueItems` because a repeated role is a second spelling of one requirement, and two spellings of one thing is the defect this repository is built around.\n\nTHE ARRAY MAY BE EMPTY, AND EMPTY HAS A MEANING: the rule demanded a quorum and named no role, so any enrolled attester of the right kind satisfies it. AT-8b keeps the FIELD required — an absent `required_roles` is still a refusal, because an absent field and an empty array would be two encodings of one object (Z4) — but nothing sets a lower bound on its length.\n\n`minItems: 1` STOOD HERE THROUGH v1.3.31 AND WAS REMOVED IN v1.3.32 (ACP-308). It was a schema-level choice with no clause behind it — the shape `operator_id` already records about its own length bound — and it made the common case invalid: `tools/check-attestation-object.py` found on its first run that the simulation builds a floor-HIGH object with `required_roles: []` for every action whose rule names no role, which is four of its five floor-HIGH actions. Neither verifier reads this field for the quorum DECISION: the threshold is `quorum_k` from the signed bundle (AT-9, PB-6, class R) and role membership is resolved against the registry, so an empty list withholds nothing a verifier needed. Stating the bound in AT-1 instead was the alternative, and it was rejected because it would force every floor-HIGH rule an operator writes to invent a role name for a requirement it does not have — a policy-authoring obligation this document never asked for, imposed by a validator rather than by a clause."
     },
     "required_count": {
       "type": "integer",

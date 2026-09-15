@@ -1,5 +1,5 @@
 {
-  "engine_commit": "cdccfa38754e5c62620ea9f2410ff89cb7715022",
+  "engine_commit": "8ce54803e0cc7f1a27bd2654bf8c3c144f8ee834",
   "engine_ref": "main",
   "files": [
     {
@@ -10,8 +10,14 @@
     },
     {
       "path": "README.md",
-      "sha256": "e8e9cf426ff8be6312a0f562ba5a2c60514f2677b779aa6ddf52782208707f93",
+      "sha256": "2dbf5a25c988db48db02b2bdef02b3f066ce48143bff890de46888dd784a9a73",
       "source_path": "tools/publish-spec/README.md",
+      "source_repo": "engine"
+    },
+    {
+      "path": "release-key.pub",
+      "sha256": "824ed7f6d6b816fd5be218848494566f272c9cd1d67931b11b319cc7ef289cd1",
+      "source_path": "release-key.pub",
       "source_repo": "engine"
     },
     {
@@ -22,7 +28,7 @@
     },
     {
       "path": "spec/ZIFFER-SPEC-001.md",
-      "sha256": "bbc5978a89453f055f0d4d9a20afb450c0a43f257a43ba8177bde54ebda1de09",
+      "sha256": "47254ece595926e87b317c828dec509f79e08d3bebbc845241391654c45c0496",
       "source_path": "spec/ZIFFER-SPEC-001.md",
       "source_repo": "engine"
     },
@@ -112,7 +118,7 @@
     },
     {
       "path": "spec/schemas/wire/attestation_object.schema.json",
-      "sha256": "ce61406b6c6f69c1ef965364133c7f632e59d5bfbda096b1aff8d04b5bd0f79b",
+      "sha256": "a5c3bc2884851af86ad468a51f5c3e0b58cc1aa3f621a34ad20ac3c740cc6539",
       "source_path": "spec/schemas/wire/attestation_object.schema.json",
       "source_repo": "engine"
     },
@@ -166,16 +172,16 @@
     },
     {
       "path": "spec/vectors/CLASSIFICATION.md",
-      "sha256": "b3eafba0ab9b1df42db17959a3e4ce181af6f21698677d00eb881a537d21eca0",
+      "sha256": "d87eec926b625ab41ae266135af72f21476234d2ff8761159500ddd5174793b7",
       "source_path": "spec/vectors/CLASSIFICATION.md",
       "source_repo": "engine"
     },
     {
       "path": "spec/vectors/OBLIGATIONS.md",
-      "sha256": "992036e8b8259cb9d892140b368ae8d3451cea80a4ea6606c9c3d12d65b03d06",
+      "sha256": "6a2148e14dbcfa6e239c6a43a1eb4e6f7ce45d2769076b83250297b156948c68",
       "source_path": "spec/vectors/OBLIGATIONS.md",
       "source_repo": "engine"
     }
   ],
-  "generated_at": "2026-09-09T10:56:47Z"
+  "generated_at": "2026-09-15T11:32:10Z"
 }

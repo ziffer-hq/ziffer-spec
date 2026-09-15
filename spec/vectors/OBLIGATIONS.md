@@ -1,6 +1,6 @@
 # Obligations — what passing the vector corpus does not prove
 
-**First draft · against ZIFFER-SPEC-001 v1.3.31 · produced by ACP-1 (VEC-1)**
+**First draft · against ZIFFER-SPEC-001 v1.3.32 · produced by ACP-1 (VEC-1)**
 **Completed by VEC-6 (ACP-3), which this draft exists to size.**
 
 Read this before the corpus, not after it.

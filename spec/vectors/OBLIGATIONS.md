@@ -1,6 +1,6 @@
 # Obligations — what passing the vector corpus does not prove
 
-**First draft · against ZIFFER-SPEC-001 v1.3.32 · produced by ACP-1 (VEC-1)**
+**First draft · against ZIFFER-SPEC-001 v1.3.33 · produced by ACP-1 (VEC-1)**
 **Completed by VEC-6 (ACP-3), which this draft exists to size.**
 
 Read this before the corpus, not after it.
@@ -9,11 +9,11 @@ A shared conformance corpus expresses **input → verdict**. It hands an impleme
 set of bytes and asks what it decides. That is a real and useful thing to check across
 languages, and it is a **minority of the evidence this repository actually relies on**.
 
-**Of 140 cases in the four suites, 92 could become shared data and 48 could not.** The
-audit suite is almost entirely in the second group: **11 of 13**, the exception being
+**Of 185 cases in the four suites, 106 could become shared data and 79 could not.** The
+audit suite is almost entirely in the second group: **15 of 17**, the exception being
 the AU-1 chain derivation added in v1.3.15, which is expressible but not yet
-extractable — see the canonicalisation note in `CLASSIFICATION.md`. On top of those 48 sit
-**61 mutation cases**, which no data file can ever carry.
+extractable — see the canonicalisation note in `CLASSIFICATION.md`. On top of those 79 sit
+**79 mutation cases**, which no data file can ever carry.
 
 Passing every vector in the corpus is therefore a **partial** claim. An implementation
 that passes all of them and does nothing else has demonstrated that it refuses the inputs
@@ -74,10 +74,25 @@ nowhere below, because it is not a corpus case.
 | `t_honest_redrive` | conformance | `DS-6` | Two executions must return the **same** idempotency key. |
 | `a_DR_release_before_window` | conformance | `DR-1` | Execute, confirm, then release too early. |
 | `a_DR_repudiation_by_outsider` | conformance | `DR-5` | Execute, then a non-recipient repudiates. |
-| `a_DR_hold_outlives_receipt` | conformance | `DR-6` | A legal hold inside which the receipt expires. |
-| `a_DR_hold_exceeds_l14_ceiling` | conformance | `DR-6` | A hold at or above the L-14 ceiling, refused when the gate is built (ACP-146). |
 | `a_DR9_irreversible_silent_release` | conformance | `DR-9` | Silence is not consent for an irreversible action. |
 | `a_DR9_operator_confirms_own_action` | conformance | `DR-9` | The operator confirms their own action. |
+| `a_DR1_hold_above_l28_ceiling` | conformance | `DR-1` | A hold above L-28's 3600 s ceiling, refused when the gate is built (v1.3.33; was DR-6's 120 s). |
+| `a_DR9_approver_confirms_own_approval` | conformance | `DR-9` | Execute, then an approver in the verified quorum confirms. |
+| `a_DR16_held_action_releases_on_silence` | conformance | `DR-16` | Execute, hold, release on silence. |
+| `a_DR16_hold_past_the_ceiling` | conformance | `DR-16` | Hold until the ceiling, then hold again. |
+| `a_DR16_hold_from_a_non_notified_party` | conformance | `DR-5` | Execute, then a non-recipient holds. |
+| `a_DR16_ceiling_below_the_hold_window` | conformance | `DR-16` | A ceiling below one window, refused when the gate is built. |
+| `a_DR16_held_to_the_ceiling_times_out` | conformance | `DR-9` | Hold, time out at the ceiling, then confirm: nothing is pending. |
+| `a_DR17_machine_lifts_the_hold` | conformance | `DR-17` | Stop an operator, then a machine identity lifts it. |
+| `a_DR17_operator_lifts_own_hold` | conformance | `DR-9` | Stop an operator, then the operator lifts it. |
+| `a_DR17_hold_from_a_non_notified_party` | conformance | `DR-5` | One operator hold from outside the bundle's audience. |
+| `a_DR18_one_person_declares_twice` | conformance | `DR-18` | One break-glass declaration by one person twice over. |
+| `a_DR18_operator_declares_for_themselves` | conformance | `DR-18` | The operator is a declarant. |
+| `a_DR18_machine_declares` | conformance | `DR-18` | A machine identity is a declarant. |
+| `a_DR18_declarant_below_AS2` | conformance | `DR-18` | A declarant's authenticator is rated AS1. |
+| `a_DR18_window_past_L34` | conformance | `DR-18` | A declared window past `break_glass_window_seconds`. |
+| `a_DR18_release_outside_the_window` | conformance | `DR-18` | Declare, then release after the window. |
+| `a_DR18_release_for_another_operator` | conformance | `DR-18` | Release under a declaration naming another operator. |
 | `a_DR10_sampled_silent_release` | conformance | `DR-9` | A sampled reversible action released on silence. |
 | `a_RV1_unclassified_action_defaults_irreversible` | conformance | `DR-9` | An unclassified action must not be releasable by silence. |
 | `t_irreversible_requires_confirmation` | conformance | `DR-9` | Positive acknowledgement releases; nothing else does. |
@@ -85,9 +100,19 @@ nowhere below, because it is not a corpus case.
 | `t_honest_repudiation_blocks` | ack | `DR-4` | Repudiate, then release must fail. |
 | `t_ACK5_replay_refused` | ack | `ACK-5` | An acknowledgement is single-use. |
 | `t_sampling_forces_confirmation` | conformance | `DR-10` | A sampled reversible action inherits the confirmation duty, so an approver cannot learn that ignoring notifications is always safe. Injects a sampler to force the branch, then runs the sequence. |
+| `t_DR6_decision_receipt_may_expire_during_the_hold` | conformance | `DR-6` | A decision receipt that expires mid-hold no longer blocks release (v1.3.33). |
+| `t_DR9_relaxed_policy_lets_an_approver_confirm` | conformance | `DR-9` | Under the signed relaxation an approver's confirmation releases. |
+| `t_DR16_a_held_action_releases_on_a_distinct_confirmation` | conformance | `DR-16` | Hold, extend by one window, confirm by a distinct person, release. |
+| `t_DR17_operator_hold_until_a_person_lifts_it` | conformance | `DR-17` | A machine stops the operator; a person lifts it. |
+| `t_DR18_two_as2_humans_declare_break_glass` | conformance | `DR-18` | Two AS2 humans declare for one hour. |
+| `t_DR16_signed_hold_extends` | ack | `DR-16` | A signed hold, then silence refused. |
+| `t_DR18_declared_operator_releases_on_silence` | conformance | `DR-18` | Declare, then release an irreversible action on silence. |
+| `t_DR17_a_person_lifts_with_a_signed_lift` | ack | `DR-17` | Hold an operator, then a signed lift. |
+| `t_DR17_a_machine_lift_is_refused` | ack | `DR-17` | Hold, then a machine's signed lift. |
+| `t_DR17_the_operator_cannot_lift_own_hold` | ack | `DR-9` | Hold, then the operator's signed lift. |
 | `t_HM2_a_person_confirms_a_release` | ack | `HM-2` | `confirm` with a WebAuthn assertion over `h(obj)`, then `release`: the human acknowledgement is a transition, and the release that follows it is a second call. |
 
-**19 cases.**
+**44 cases.**
 
 ---
 
@@ -98,6 +123,8 @@ implementation's own records. A verdict is portable; a ledger is not.
 
 | Case | Suite | What is asserted |
 | --- | --- | --- |
+| `t_DR10_cap_exhausted_releases_under_DR7` | conformance | DR-10 / L-36: a sampling miss counted, and the caller's per-attester counts left unchanged. |
+| `t_DR12_asks_are_counted_per_attester` | conformance | DR-12 / L-37: the per-attester ask counts after a hold and a lever. |
 | `t_dr13_irreversible_below_high_is_noticed` | conformance | The action **executes**, and a notice record naming the right recipients exists in the Executor's ledger beforehand. The verdict alone is indistinguishable from the defect it closes. |
 | `t_deferred_holds_then_releases` | conformance | Released on silence **and** counted as an unverified release. |
 | `t_PB10_alert_carries_its_signed_audience` | conformance | The replayed receipt is refused at `CL-2` **and** the alert is recorded with its PB-10 class and the recipients the signed bundle names for that class. PB-10's raise-time half is a positive-path obligation — deleting the record changes no verdict, so no mutant kills it — and this row is where that duty lands on a second implementation. |
@@ -105,7 +132,7 @@ implementation's own records. A verdict is portable; a ledger is not.
 | `t_a_gate_with_no_bundle_gets_the_documents_numbers` | conformance | A gate built with no bundle carries 3600 / 60 / 10 (PB-13's absent rule at construction). |
 | `t_a_persons_confirmation_faces_no_assurance_floor` | ack | §8.6c applies no AT-10 floor at the acknowledgement; the gap is held open as a passing test so that closing it is a visible change. |
 
-**6 cases.** Each is worth reading closely by anyone building a second
+**8 cases.** Each is worth reading closely by anyone building a second
 implementation, because the verdict alone is exactly what the pre-fix code also
 produced — "it executed", twice, and "it refused at CL-2" once. The whole content of
 the check is in the record.
@@ -169,11 +196,15 @@ expresses: the anchor must fail *between* two points in one release.
 ## Obligation 5 — the audit layer, in full
 
 Beyond the 3 anchor-reachability cases above, the remaining audit cases assert counts
-and orderings over sequences. **11 of the 13 audit cases are obligations** — every one
-that asserts a count, an ordering or an environment; these are the other 8.
+and orderings over sequences. **15 of the 17 audit cases are obligations** — every one
+that asserts a count, an ordering or an environment; these are the other 12.
 
 | Case | Rule | What must be shown |
 | --- | --- | --- |
+| `t_AU9_v1_3_33_records_chain` | `AU-9` | The three lever classes and a hashed ingress refusal chain (v1.3.33). |
+| `t_DR16_hold_is_a_recorded_lever` | `DR-16` / `AU-9` | A hold is a `hold_extended` record; a pending refusal writes no `release`. |
+| `t_release_record_is_written_once_at_the_terminal_answer` | §11.1 | One `release` record per action, at its terminal answer. |
+| `t_DR18_release_under_declaration_is_one_record` | `DR-18` / `AU-7` | A declared release is one executed record, `acknowledged_by` empty, anchored. |
 | `t_honest_release_counts_once` | `AU-7`, `AC-5` | The record is anchored **before** the release, and the operator's accumulator increments exactly once. Ordering is the whole claim. |
 | `t_redrive_increments_once` | `DS-3` | Two releases of one logical action increment once. |
 | `t_T28_repudiated_does_not_increment` | `AC-5` | Five actions attributed to a victim and repudiated leave the deny-effect accumulator at zero — and the victim is not locked out afterwards. |
@@ -183,7 +214,7 @@ that asserts a count, an ordering or an environment; these are the other 8.
 | `t_AU8_genesis_survives_chain_destruction` | `AU-8` | A destroyed tenant chain still leaves evidence in the anchor. |
 | `t_reconciliation_clean_on_honest_run` | — | An honest run reconciles with no findings. |
 
-**8 cases here; 13 across the suite** — the other 5 being the 3 anchor-reachability cases
+**12 cases here; 17 across the suite** — the other 5 being the 3 anchor-reachability cases
 in Obligation 4 and the AU-1 chain derivation, which is vector-expressible. An
 implementation may pass every vector in the corpus while having no audit chain at all.
 
@@ -209,7 +240,7 @@ the cap is enforced on receipt *and* met on issue.
 
 ## Obligation 7 — the mutation suites
 
-**61 mutants: 48 executor, 6 acknowledgement, 7 audit.**
+**79 mutants: 62 executor, 7 acknowledgement, 10 audit.**
 
 The executor total moved 40 → 43 in v1.3.25 and the arithmetic is worth stating: four
 were added (three for DR-14, one for PB-11) and one was REMOVED. The removed mutant
@@ -288,7 +319,7 @@ turn and requires each one's live test red — 8/8 KILL, run by its CI.
 | 5 | `AU-6` | `t_T30_outage_suspends_sampling` | anchor offline `au6_sampling_suspends_during_outage` — the suspension only; the "irreversible ones still demand theirs" half waits on the DR gate (ACP-47) |
 | 5 | `AU-8` | `t_AU8_genesis_survives_chain_destruction` | **partial**: the truncation test is the one-row form. Whole-chain destruction followed by re-genesis is a one-test addition, not yet written |
 | 5 | — | `t_reconciliation_clean_on_honest_run` | anchor offline `au7_the_correct_ordering_reconciles_clean`; live `au8_genesis_is_anchored_once_and_the_chain_reopens` (reconciles clean after a restart) |
-| 7 | — | 61 mutants | `tools/mutate-kms.py` 6/6 and `tools/mutate-store.py` 8/8 — the product repository's own harness against its own source, as this obligation requires |
+| 7 | — | 79 mutants | `tools/mutate-kms.py` 6/6 and `tools/mutate-store.py` 8/8 — the product repository's own harness against its own source, as this obligation requires |
 
 **What the table does not claim.** The `DR-*` rows of Obligation 1 (release window,
 repudiation, hold length) are ACP-47's and have no Rust evidence. Partition behaviour under a
@@ -303,17 +334,17 @@ credential domains are a deployment property, not a test result.
 
 | Obligation | Cases |
 | --- | ---: |
-| 1 — sequences | 19 |
-| 2 — assertions about state | 6 |
+| 1 — sequences | 44 |
+| 2 — assertions about state | 8 |
 | 3 — structural properties of the deployment | 5 |
 | 4 — environment and executor-local state | 6 |
-| 5 — the audit layer (remainder) | 8 |
+| 5 — the audit layer (remainder) | 12 |
 | 6 — duties on the encoder | 3 |
-| 7 — mutation suites | *(61 mutants, no case rows)* |
+| 7 — mutation suites | *(79 mutants, no case rows)* |
 | 8 — a lexeme the format does not carry | 1 |
-| **Total cases** | **48** |
+| **Total cases** | **79** |
 
-Vector-expressible: **92**. Obligations: **48**. Mutants, additionally: **61**.
+Vector-expressible: **106**. Obligations: **79**. Mutants, additionally: **79**.
 
 The total is the number of rows classified `obligation` in `CLASSIFICATION.md`, and
 `tools/selftest.sh` asserts that every such row has exactly one row here and that every

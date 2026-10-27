@@ -17,7 +17,7 @@
     },
     "alert_targets": {
       "type": "object",
-      "description": "alert class -> recipient identities. Keys are the classes PB-10 enumerates (BUNDLE_INVALID, SIGNING_SUBSTRATE, RECEIPT_INVALID, RECOMPUTATION_MISMATCH, ATTESTATION_INVALID, LEDGER_REPLAY, SUITE_BELOW_FLOOR, DEFERRED_RELEASE, AUDIT_INTEGRITY, ATTESTATION_QUEUE_DEPTH, CONTEXT_STORE); the map is open here so that the clause, not this file, owns the list, and the loader refuses a bundle in which any of them is missing. Every value is a non-empty set: an empty array is REFUSED rather than read as 'wake nobody', because the two are indistinguishable at run time from an entry never written, and the fail-safe reading of both is refusal.",
+      "description": "alert class -> recipient identities. Keys are the classes PB-10 enumerates (BUNDLE_INVALID, SIGNING_SUBSTRATE, RECEIPT_INVALID, RECOMPUTATION_MISMATCH, ATTESTATION_INVALID, LEDGER_REPLAY, SUITE_BELOW_FLOOR, DEFERRED_RELEASE, FLOOD_CAP, AUDIT_INTEGRITY, ATTESTATION_QUEUE_DEPTH, CONTEXT_STORE); the map is open here so that the clause, not this file, owns the list, and the loader refuses a bundle in which any of them is missing. Every value is a non-empty set: an empty array is REFUSED rather than read as 'wake nobody', because the two are indistinguishable at run time from an entry never written, and the fail-safe reading of both is refusal.",
       "propertyNames": {
         "minLength": 1,
         "maxLength": 128

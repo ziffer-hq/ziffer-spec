@@ -3,7 +3,7 @@
   "$id": "https://acp.spec/schemas/bundle/limits.schema.json",
   "title": "Deployment limits (ZIFFER-SPEC-001 §8.2 limits.json, PB-13)",
   "x-acp-name": "Limits",
-  "description": "The three numbers this document calls policy and no member carried: how long a human has to approve (L-15), how long a floor-HIGH action is held before release (DR-1, L-28), and what fraction of reversible releases draws a mandatory confirmation (DR-10, L-29). Signed, inside the tree hash, read by the issuer of each: the Policy Engine sets an Attestation Object's `expires_at` from `attestation_window_seconds`; the Executor builds its deferred door from the other two.\n\nWHY THIS MEMBER EXISTS (ACP-287, v1.3.30). DR-1 and DR-10 said `bundle-configured` since v1.3.7 and no schema had a field for either, so every implementation read the hold window and the sampling rate from its own environment -- a number this document calls signed policy, set per process by whoever runs it. L-15 gave the attestation window a ceiling and no home at all, so the one engine that issues attestations used the ceiling as the window and said so in its module note: shortening it would be that binary choosing how long a human has to approve. It was right. The place the number lives is here.\n\nEVERY FIELD IS OPTIONAL, AND ABSENT MEANS THE DOCUMENT'S OWN DEFAULT -- the AT-10 precedent (`min_attester_assurance`, absent ⇒ AS0): a permissive reading taken openly, so that no bundle written before this member existed is invalidated by it, and a bundle that omits the file altogether reads as every field at its default. The defaults are this document's numbers and not an implementation's: 3600 s is L-15's ceiling and what every deployment had; 60 s and 10 % are the values DR-1 and DR-10 state. A deployment that wants the document's defaults may say nothing; one that wants anything else must sign it here.\n\nBOUNDS ARE REFUSALS, NOT CLAMPS. A value outside its declared range is an invalid bundle under PB-1 (`LimitOutOfBounds`), refused at load by every consumer and never rounded to the nearest legal value -- a clamped limit is a limit nobody chose. The bounds are the document's: L-15's ceiling, L-28's floor and DR-6's ceiling (a hold at or above L-14's 120 s receipt validity is an unsatisfiable configuration), and a percentage. A present file that is not an object, or a field of the wrong type, is `Malformed`.\n\nINTEGERS ONLY. A float in a signed policy file is a canonicalisation question -- AT-8a forbids one in a canonical structure for the reason `canon()` cannot encode it deterministically -- and DR-10's own unit is a percentage, so the fraction is carried as an integer percent. One-percent resolution is deliberate and disclosed: DR-10 exists to keep the detection channel live, not to meter it.\n\nWHAT IS NOT HERE, AND WHY. L-25 (DS-6e, the re-drive maximum, `bundle-configured, default 3`) and L-23 (AQ-3, queue depth per attester) are also called bundle-configured and have no reader in any implementation; a field nothing reads is documentation shaped like a control (the RV-1 lesson, v1.3.15), so each joins this member with its first reader and not before. The Executor cannot VERIFY the attestation window either: AT-1's object carries `expires_at` and no issue instant, so only the issuer knows the length. The declared value governs the issuer, and the bundle is signed.",
+  "description": "The three numbers this document calls policy and no member carried: how long a human has to approve (L-15), how long a floor-HIGH action is held before release (DR-1, L-28), and what fraction of reversible releases draws a mandatory confirmation (DR-10, L-29). Signed, inside the tree hash, read by the issuer of each: the Policy Engine sets an Attestation Object's `expires_at` from `attestation_window_seconds`; the Executor builds its deferred door from the other two.\n\nWHY THIS MEMBER EXISTS (ACP-287, v1.3.30). DR-1 and DR-10 said `bundle-configured` since v1.3.7 and no schema had a field for either, so every implementation read the hold window and the sampling rate from its own environment -- a number this document calls signed policy, set per process by whoever runs it. L-15 gave the attestation window a ceiling and no home at all, so the one engine that issues attestations used the ceiling as the window and said so in its module note: shortening it would be that binary choosing how long a human has to approve. It was right. The place the number lives is here.\n\nEVERY FIELD IS OPTIONAL, AND ABSENT MEANS THE DOCUMENT'S OWN DEFAULT -- the AT-10 precedent (`min_attester_assurance`, absent ⇒ AS0): a permissive reading taken openly, so that no bundle written before this member existed is invalidated by it, and a bundle that omits the file altogether reads as every field at its default. The defaults are this document's numbers and not an implementation's: 3600 s is L-15's ceiling and what every deployment had; 60 s and 10 % are the values DR-1 and DR-10 state. A deployment that wants the document's defaults may say nothing; one that wants anything else must sign it here.\n\nBOUNDS ARE REFUSALS, NOT CLAMPS. A value outside its declared range is an invalid bundle under PB-1 (`LimitOutOfBounds`), refused at load by every consumer and never rounded to the nearest legal value -- a clamped limit is a limit nobody chose. The bounds are the document's: L-15's ceiling, L-28's floor and ceiling, L-33 .. L-36, and a percentage. Through v1.3.32 the hold window's ceiling was DR-6's 119 s, because one receipt had to outlive the hold; v1.3.33 split it into a decision receipt and a release receipt (DR-6, DR-15) and the hold is bounded by L-28 alone.\n\nONE BOUND IS A RELATION, AND THE SCHEMA CANNOT STATE IT. `hold_ceiling_seconds`' minimum is \"the hold window\" (PB-13, L-33) -- the other field's EFFECTIVE value, its default when absent. JSON Schema has no keyword for that, so this file states the ceiling's absolute range (30, the least a hold window can be, to 86 400) and every LOADER enforces the relation, refusing a ceiling below the window as `LimitOutOfBounds` exactly as it refuses a value outside its own range. Two loaders, one rule: `acp_bundle.py` and `acp-bundle`'s `verify.rs`, held together by `tools/check-bundle-differential.py`. A present file that is not an object, or a field of the wrong type, is `Malformed`.\n\nINTEGERS ONLY. A float in a signed policy file is a canonicalisation question -- AT-8a forbids one in a canonical structure for the reason `canon()` cannot encode it deterministically -- and DR-10's own unit is a percentage, so the fraction is carried as an integer percent. One-percent resolution is deliberate and disclosed: DR-10 exists to keep the detection channel live, not to meter it.\n\nWHAT IS NOT HERE, AND WHY. L-25 (DS-6e, the re-drive maximum, `bundle-configured, default 3`) and L-23 (AQ-3, queue depth per attester) are also called bundle-configured and have no reader in any implementation; a field nothing reads is documentation shaped like a control (the RV-1 lesson, v1.3.15), so each joins this member with its first reader and not before. The Executor cannot VERIFY the attestation window either: AT-1's object carries `expires_at` and no issue instant, so only the issuer knows the length. The declared value governs the issuer, and the bundle is signed.\n\nSIX MEMBERS SINCE v1.3.33 (ACP-402), each optional with the document's default: the hold ceiling (DR-16, DR-17), the break-glass window (DR-18), the per-operator floor-HIGH proposal rate (DR-19), the per-attester daily sampled-confirmation cap (DR-10), and `confirm_by_distinct_person` (DR-9) -- the first BOOLEAN in this file, whose absent rule is the generator's first boolean value default. A bundle written before v1.3.33 carries none of them and reads as every one at its default: the AT-10 reading, a permissive default taken openly.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -29,8 +29,8 @@
     "hold_window_seconds": {
       "type": "integer",
       "minimum": 30,
-      "maximum": 119,
-      "description": "DR-1 / L-28: how long a floor-HIGH action is held in `pending_release` before it may release. At least 30 (L-28's floor: a hold too short for a human to read the summary is not a detection channel), and below 120 (DR-6: L-14 caps receipt validity at 120 s, and a hold that can outlive its receipt is an unsatisfiable configuration, refused rather than silently never releasing). Absent ⇒ 60, DR-1's default.",
+      "maximum": 3600,
+      "description": "DR-1 / L-28: how long a floor-HIGH action is held in `pending_release` before it may release. At least 30 (L-28's floor: a hold too short for a human to read the summary is not a detection channel) and at most 3600 (L-28's ceiling since v1.3.33). Through v1.3.32 the ceiling was 119, below L-14's 120 s receipt validity, because one receipt had to outlive the hold (DR-6 as it then read); v1.3.33's release receipt (DR-15) carries its own window from release, so the hold is no longer coupled to L-14. Absent => 60, DR-1's default.",
       "x-acp-absent": {
         "clause": "DR-1",
         "behaviour": "value",
@@ -48,6 +48,64 @@
         "behaviour": "value",
         "value": 10,
         "why": "DR-10 states the default; a bundle that says nothing gets the document's number."
+      }
+    },
+    "hold_ceiling_seconds": {
+      "type": "integer",
+      "minimum": 30,
+      "maximum": 86400,
+      "description": "DR-16 / DR-17 / L-33: the longest an explicit hold may extend an action, counted from the first hold; an action still held at the ceiling is refused as a timeout. The schema's `minimum` is the least legal hold window, because the clause's minimum -- \"the hold window\" -- is a RELATION to `hold_window_seconds`' effective value that JSON Schema cannot state; every loader refuses a ceiling below the effective window as `LimitOutOfBounds`. Absent => 28 800 (8 h).",
+      "x-acp-absent": {
+        "clause": "L-33",
+        "behaviour": "value",
+        "value": 28800,
+        "why": "PB-13 states the default; a bundle that says nothing gets the document's number."
+      }
+    },
+    "break_glass_window_seconds": {
+      "type": "integer",
+      "minimum": 60,
+      "maximum": 28800,
+      "description": "DR-18 / L-34: the longest a break-glass declaration lets one operator's floor-HIGH actions release under DR-7's rule. Absent => 7 200 (2 h).",
+      "x-acp-absent": {
+        "clause": "L-34",
+        "behaviour": "value",
+        "value": 7200,
+        "why": "PB-13 states the default; a bundle that says nothing gets the document's number."
+      }
+    },
+    "floor_high_proposals_per_operator_per_hour": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10000,
+      "description": "DR-19 / L-35: the most floor-HIGH proposals one operator may make in a trailing hour before the Policy Engine refuses under DR-19; raised for one operator only by a DR-18 declaration. Absent => 60.",
+      "x-acp-absent": {
+        "clause": "L-35",
+        "behaviour": "value",
+        "value": 60,
+        "why": "PB-13 states the default; a bundle that says nothing gets the document's number."
+      }
+    },
+    "max_sampled_confirmations_per_attester_per_day": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "description": "DR-10 / L-36: the most acknowledgements sampling may demand of one attester in one day. 0 is legal and switches sampled confirmation off per person, exactly as `sample_percent: 0` switches it off per action. Absent => 10.",
+      "x-acp-absent": {
+        "clause": "L-36",
+        "behaviour": "value",
+        "value": 10,
+        "why": "PB-13 states the default; a bundle that says nothing gets the document's number."
+      }
+    },
+    "confirm_by_distinct_person": {
+      "type": "boolean",
+      "description": "DR-9: whether an irreversible action's confirmation must come from someone other than an attester whose approval is in the verified quorum. `false` is the relaxation for a customer with a single approver, a signed policy choice that any customer-facing rendering MUST display as a weakened setting. Absent => true: the rule, not its relaxation.",
+      "x-acp-absent": {
+        "clause": "DR-9",
+        "behaviour": "value",
+        "value": true,
+        "why": "DR-9 states the rule and PB-13 the default; the relaxation takes effect only when it is signed."
       }
     }
   }

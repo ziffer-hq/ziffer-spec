@@ -1,5 +1,5 @@
 {
-  "engine_commit": "8ce54803e0cc7f1a27bd2654bf8c3c144f8ee834",
+  "engine_commit": "d4998aa44b44873cda0c465012b34d13f609e887",
   "engine_ref": "main",
   "files": [
     {
@@ -10,7 +10,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "2dbf5a25c988db48db02b2bdef02b3f066ce48143bff890de46888dd784a9a73",
+      "sha256": "9991513b9e4dff6e3bb901a151882d40d85aafc2fb976afcbfd4a0a0dd7a0d2c",
       "source_path": "tools/publish-spec/README.md",
       "source_repo": "engine"
     },
@@ -28,7 +28,7 @@
     },
     {
       "path": "spec/ZIFFER-SPEC-001.md",
-      "sha256": "47254ece595926e87b317c828dec509f79e08d3bebbc845241391654c45c0496",
+      "sha256": "c19cb980bef2f6b2482cfed25646d38bd0831a8a8a0e7ae1f8112850d335746a",
       "source_path": "spec/ZIFFER-SPEC-001.md",
       "source_repo": "engine"
     },
@@ -40,7 +40,7 @@
     },
     {
       "path": "spec/schemas/bundle/alert_targets.schema.json",
-      "sha256": "46a858bb2555acf5634b6477e03861d8e4ebca8b763f4b37d77eaa31f7535ef4",
+      "sha256": "2f494ca9191b54d74c76204ba8fa8ac56c1e0dcdb2d5bb976df009a764a9c836",
       "source_path": "spec/schemas/bundle/alert_targets.schema.json",
       "source_repo": "engine"
     },
@@ -64,7 +64,7 @@
     },
     {
       "path": "spec/schemas/bundle/limits.schema.json",
-      "sha256": "9f4b6d42ced776fe06258473413cf488575f6a3ebf0b8aece30a7b31dc9b2f7d",
+      "sha256": "c3d77351a80d5acd1dfb3d01a658f79b9bcfd8d210a9a04503c917fedd8f0c20",
       "source_path": "spec/schemas/bundle/limits.schema.json",
       "source_repo": "engine"
     },
@@ -106,7 +106,7 @@
     },
     {
       "path": "spec/schemas/wire/acknowledgement.schema.json",
-      "sha256": "4e89ee1f90c54365ba07b893f2c0fa10bb0c4663da36828bf9ef5d0754f542f4",
+      "sha256": "970a9612d21d6ab8d2b5424d7a886710fd18cf31b38f1a8d10778caabcede25c",
       "source_path": "spec/schemas/wire/acknowledgement.schema.json",
       "source_repo": "engine"
     },
@@ -124,7 +124,7 @@
     },
     {
       "path": "spec/schemas/wire/audit_record.schema.json",
-      "sha256": "9ff980fe8a7dae4385f6804a8feb9491f7d70c3466f9ebf8008de06946728a1b",
+      "sha256": "3b360794e7e3d41f46843ae84744572695d9b3370610c28ea6ba39a969a4592a",
       "source_path": "spec/schemas/wire/audit_record.schema.json",
       "source_repo": "engine"
     },
@@ -172,16 +172,16 @@
     },
     {
       "path": "spec/vectors/CLASSIFICATION.md",
-      "sha256": "d87eec926b625ab41ae266135af72f21476234d2ff8761159500ddd5174793b7",
+      "sha256": "5c3fa0988b60f5dbc6b99fda5e7e42816005365f2325022bf7481457ec855652",
       "source_path": "spec/vectors/CLASSIFICATION.md",
       "source_repo": "engine"
     },
     {
       "path": "spec/vectors/OBLIGATIONS.md",
-      "sha256": "6a2148e14dbcfa6e239c6a43a1eb4e6f7ce45d2769076b83250297b156948c68",
+      "sha256": "8ae6320b072b7d414bc347a5dfdd56213a2652172b6543c09931d1805af69e3f",
       "source_path": "spec/vectors/OBLIGATIONS.md",
       "source_repo": "engine"
     }
   ],
-  "generated_at": "2026-09-15T11:32:10Z"
+  "generated_at": "2026-10-27T14:40:33Z"
 }

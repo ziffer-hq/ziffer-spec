@@ -1,6 +1,6 @@
 # Vector classification — which suite cases can become shared data, and which cannot
 
-**Against ZIFFER-SPEC-001 v1.3.32 · 140 cases across four suites · ACP-1 (VEC-1)**
+**Against ZIFFER-SPEC-001 v1.3.33 · 185 cases across four suites · ACP-1 (VEC-1)**
 
 This file classifies every case in the four suites that a shared vector corpus could
 plausibly cover. It is the derivation behind [`OBLIGATIONS.md`](OBLIGATIONS.md); read that
@@ -43,12 +43,12 @@ feature — that is a VEC-2 input, not a hedge.
 ## What the corpus cannot carry, and what replaces it
 
 **Signatures are not transportable, so no vector carries one.** This is not new — CLAUDE.md
-has said so since v1.3.14 — but it is load-bearing here, because 119 of the 140 cases involve a signed artifact.
-If it had no answer, the extractable count would be near zero rather than 92.
+has said so since v1.3.14 — but it is load-bearing here, because 160 of the 185 cases involve a signed artifact.
+If it had no answer, the extractable count would be near zero rather than 106.
 
-That 119 is the whole set minus the two suites that build no signed artifact at all:
+That 160 is the whole set minus the two suites that build no signed artifact at all:
 the 8 canonical-CBOR cases, which are literal bytes with no keys anywhere, and
-the 13 audit cases, which construct held actions directly. Every case in the conformance
+the 17 audit cases, which construct held actions directly. Every case in the conformance
 and acknowledgement suites signs something.
 
 The answer the repository already uses: **`HybridKey` derives both halves from its seed**,
@@ -88,17 +88,17 @@ discriminator is a signature therefore need a **declared mutation vocabulary** �
 primitive pq`, `replace primitive pq with zeros`, `add undeclared primitive`, `collapse to
 scalar`, `re-sign with an unregistered seed`, `mutate field after signing`, and — for the
 AB-4 pair — `withhold a presented entry` and `inject a presented entry`.
-17 cases depend on that vocabulary existing; they are marked `sig-mutation` below, and the
+22 cases depend on that vocabulary existing; they are marked `sig-mutation` below, and the
 count is derived from the marker.
 
 ---
 
-## Suite 1 — conformance (102 cases: 20 positive, 82 attacks)
+## Suite 1 — conformance (131 cases: 29 positive, 102 attacks)
 
 Where a case fails closed, the rule and the raising function were taken from a run, not
 from the docstring.
 
-### Positive path (20)
+### Positive path (29)
 
 | Case | Class | Why |
 | --- | --- | --- |
@@ -110,6 +110,15 @@ from the docstring.
 | `t_receipt_fits_the_custody_limit` | obligation | One `execute` and it executes — but that verdict is `t_honest_high`'s. What the case asserts is two byte lengths of the Executor's own canonical encoding: the signed body at or under `RECEIPT_MAX_SIGNED_BYTES` (4,096 — the KMS `RAW` cap, executed in `tools/kms-compat-2026-08-22.json` and again in the current transcript, `tools/kms-compat-2026-08-24.json` (2026-08-24)) with the full quorum bound beside it. A measurement, not a verdict — fails (3). And the number binds to `canon()`, which is JSON modelling the canonical CBOR AT-8a requires, so a vector carrying an expected length would encode the model: the Suite 7 note again. |
 | `t_lying_screen_is_caught_by_notification` | obligation | Compares two rendered texts, then repudiates, then releases. The claim is about two code paths disagreeing — no artifact carries it. |
 | `t_irreversible_requires_confirmation` | obligation | `execute` → `confirm` → `release`. |
+| `t_DR6_decision_receipt_may_expire_during_the_hold` | obligation | v1.3.33, was the ATTACK `a_DR_hold_outlives_receipt`: DR-6 was rewritten and the same three calls (`execute` → `confirm` → `release`) now release. A sequence, for the old row's reason. |
+| `t_DR9_relaxed_policy_lets_an_approver_confirm` | obligation | `execute` → `confirm` → `release` under `confirm_by_distinct_person: false`. A sequence; the relaxation itself is signed bundle data a vector could carry. |
+| `t_DR16_a_held_action_releases_on_a_distinct_confirmation` | obligation | `execute` → `hold_extend` → `confirm` → `release`: DR-16's honest path is four transitions over one caller-owned record. |
+| `t_DR10_cap_exhausted_releases_under_DR7` | obligation | The discriminator is the CALLER's per-attester daily count (L-36), handed in and classified T. Executor-local state, like the capability context. |
+| `t_DR12_asks_are_counted_per_attester` | obligation | Asserts a count (L-37), not a verdict — Obligation 2's shape. |
+| `t_DR19_over_cap_predicate` | **vector** | A pure predicate over three integers — count, limit, open declaration cap — to a boolean. Needs a predicate verdict class the corpus does not have; nothing signed. |
+| `t_DR17_operator_hold_until_a_person_lifts_it` | obligation | `operator_hold` → `operator_hold_lift` over a caller-owned `OperatorHold`. A sequence. |
+| `t_DR18_two_as2_humans_declare_break_glass` | obligation | One `operator_release` over the registry's reading of two declarants and the caller's clock; the signed form is the ack suite's `t_DR18_two_humans_declare`, which is the vector. |
+| `t_DR18_declared_operator_releases_on_silence` | obligation | `execute` → `operator_release` → `release_under_declaration`: a sequence over caller-owned records. |
 | `t_sampling_forces_confirmation` | obligation | Injects a sampler (`lambda: 0.0`) to force a probabilistic branch, then runs a sequence. |
 | `t_AT10_assured_quorum_executes` | **vector** | One `execute`; verdict is executes + risk `HIGH`, with the assurance map and floor as bundle data. Needs declared seeds for the quorum, like `t_honest_high`. |
 | `t_dr13_irreversible_below_high_is_noticed` | obligation | One `execute`, but the assertion is that a notice record exists in the Executor's own ledger with the right recipients. State, not a verdict — fails (3). |
@@ -124,9 +133,9 @@ from the docstring.
 
 | `t_DR2_shared_render_library_is_not_caught_at_run_time` | obligation | Was an ATTACK until v1.3.25, refused under `DR-2` because the notifier's self-declared render path matched the approval summary's. DR-14 accepts it and the specification says it must: a signature proves who rendered a summary and for which action, never that the prose is faithful, and independence of the two render paths is DR-2's STRUCTURAL requirement. The case now asserts the acceptance and compares the notification's text against the approval door's renderer — which is the identity of a code path, exactly what (3) excludes. Kept rather than deleted so the narrowing is visible. |
 
-**Positive path: 7 vector · 13 obligation.**
+**Positive path: 8 vector · 21 obligation.**
 
-### Attacks (82)
+### Attacks (102)
 
 | Case | Class | Rule | Why |
 | --- | --- | --- | --- |
@@ -161,17 +170,32 @@ from the docstring.
 | `a_DR_notification_undeliverable` | obligation | `DR-8` | Discriminator is a notifier double whose `deliver()` returns fewer recipients than `recipients()`. |
 | `a_DR_no_recipients` | obligation | `DR-8` | Notifier double returning an empty recipient list. |
 | `a_DR_repudiation_by_outsider` | obligation | `DR-5` | `execute` then `repudiate`. |
-| `a_DR_hold_outlives_receipt` | obligation | `DR-6` | Three calls under a legal 60 s hold, with a receipt that expires mid-hold — the expiry branch. |
-| `a_DR_hold_exceeds_l14_ceiling` | obligation | `DR-6` | Gate construction alone: a 130 s hold is refused before any call — the configuration branch (ACP-146). |
 | `a_DR9_irreversible_silent_release` | obligation | `DR-9` | `execute` then `release`. |
 | `a_DR9_operator_confirms_own_action` | obligation | `DR-9` | `execute` then `confirm`. |
+| `a_DR1_hold_above_l28_ceiling` | obligation | `DR-1` | Gate construction alone: a 3601 s hold is refused before any call. Was `a_DR_hold_exceeds_l14_ceiling` (DR-6, 130 s) through v1.3.32. At load the same bound is a `bundle-load` vector (`LimitOutOfBounds`). |
+| `a_DR9_approver_confirms_own_approval` | obligation | `DR-9` | `execute` then `confirm` by an attester in the verified quorum. |
+| `a_DR16_held_action_releases_on_silence` | obligation | `DR-16` | `execute` → `hold_extend` → `release`. |
+| `a_DR16_hold_past_the_ceiling` | obligation | `DR-16` | Three `hold_extend` calls; the third meets the ceiling. |
+| `a_DR16_hold_from_a_non_notified_party` | obligation | `DR-5` | `execute` then `hold_extend` by a non-recipient. |
+| `a_DR16_ceiling_below_the_hold_window` | obligation | `DR-16` | Gate construction alone. At load it is a `bundle-load` vector (`LimitOutOfBounds`). |
+| `a_DR16_held_to_the_ceiling_times_out` | obligation | `DR-9` | `hold_extend` → `release` at the ceiling → `confirm`: the refusal asserted is that nothing is pending any more. |
+| `a_DR17_machine_lifts_the_hold` | obligation | `DR-17` | `operator_hold` → `operator_hold_lift` by a machine identity. |
+| `a_DR17_operator_lifts_own_hold` | obligation | `DR-9` | `operator_hold` → `operator_hold_lift` by the operator. |
+| `a_DR17_hold_from_a_non_notified_party` | obligation | `DR-5` | One `operator_hold` over the caller's reading of the audience; the signed form is a vector in the ack suite. |
+| `a_DR18_one_person_declares_twice` | obligation | `DR-18` | One `operator_release` over plain declarant values; the signed forms in the ack suite are the vectors. |
+| `a_DR18_operator_declares_for_themselves` | obligation | `DR-18` | As above. |
+| `a_DR18_machine_declares` | obligation | `DR-18` | As above. |
+| `a_DR18_declarant_below_AS2` | obligation | `DR-18` | As above. |
+| `a_DR18_window_past_L34` | obligation | `DR-18` | As above; the window is also the caller's clock against a declared instant. |
+| `a_DR18_release_outside_the_window` | obligation | `DR-18` | `execute` → declaration → release after its window: a sequence against the caller's clock. |
+| `a_DR18_release_for_another_operator` | obligation | `DR-18` | `execute` → release under a declaration naming another operator. |
 | `a_DR10_sampled_silent_release` | obligation | `DR-9` | Sampler injection plus a sequence. |
 | `a_RV3_receipt_claims_reversible` | **vector** | `RV-3` | Receipt claims `REVERSIBLE`. Verified to refuse inside `execute` with **no gate present**, so despite its deferred-gate fixture this is a single-call artifact case. |
 | `a_RV1_unclassified_action_defaults_irreversible` | obligation | `DR-9` | Bundle mutation, but the refusal only arrives at `release` — `execute` then `release`. |
 | `a_DR13_no_notice_recipients` | **vector** | `DR-13` | Bundle omits `notice_targets` for an irreversible action graded below HIGH. One `execute`. Verified to fail closed under the default capability context too. |
 | `a_RAD5_receipt_tenant_not_bundles` | **vector** | `9.3-8` | The bundle's `tenant_id` differs from the receipt's, while the receipt and the Proposal agree with each other. One `execute`, and every input is signed bundle or receipt data — the discriminator is a bundle field, like `a_CR4_incomparable_floor`. Needs declared seeds for the quorum. |
 | `a_RAD5_bundle_names_no_tenant` | **vector** | `RAD-5` | Refuses at bundle construction — zero Executor calls, like `a_PBDISTINCT_one_key_two_identities`. Needs the same `bundle-load` verdict class: the input is a bundle tree alone and the outcome is "refused at load". |
-| `a_PB10_alert_class_unaddressed` | **vector** | `PB-10` | `bundle-load`: the bundle's `alert_targets` omits one of PB-10's eleven classes. A bundle tree in, refused at load out. |
+| `a_PB10_alert_class_unaddressed` | **vector** | `PB-10` | `bundle-load`: the bundle's `alert_targets` omits one of PB-10's twelve classes. A bundle tree in, refused at load out. |
 | `a_PB10_alert_audience_empty` | **vector** | `PB-10` | `bundle-load`: the class is present and its recipient list is empty. A separate vector from the row above, not a duplicate of it — a loader testing membership rather than emptiness passes one and fails the other, and only two inputs can tell those apart. |
 | `a_DR14_notification_signed_by_wrong_door` | **vector** | `DR-14` | `notification-as-data`: the Notification is signed under the `presentation` key the bundle names, not the `notification` one. Every input is signed bytes — the bundle's `door_identities`, the receipt, the two Rendered Summary objects — and the outcome is a refusal on a named rule. |
 | `a_DR14_notification_signed_by_unnamed_key` | **vector** | `DR-14` | `notification-as-data`: the Notification is signed under a well-formed key the bundle names nowhere. A separate vector from the row above, not a duplicate — one key belongs to the OTHER role, this one to no role, and an implementation resolving the key from the object rather than from the bundle passes this and fails nothing. |
@@ -188,6 +212,11 @@ from the docstring.
 | `a_CR3_pq_forged_classical_genuine` | **vector** | `9.3-1` | `sig-mutation`: replace the `pq` primitive with zeros. |
 | `a_CR3_extra_primitive` | **vector** | `9.3-1` | `sig-mutation`: add an undeclared third primitive. |
 | `a_CR2_legacy_scalar_signature` | **vector** | `9.3-1` | `sig-mutation`: collapse the signature map to a bare string. |
+| `a_ACP523_sig_non_ascii_splits_a_pair` | **vector** | `9.3-1` | `sig-mutation`: replace the `pq` value with the literal `"a\u20ac"` — four bytes, even length, a multi-byte character across the first hex pair. The verdict is the refusal *name*; the defect it pins was a panic in one implementation, so "did not execute" would have passed against it. |
+| `a_ACP523_sig_non_ascii_on_a_pair_boundary` | **vector** | `9.3-1` | `sig-mutation`: replace the `pq` value with the literal `"\u00e9"` — two bytes, on a pair boundary. |
+| `a_ACP523_sig_non_ascii_odd_byte_length` | **vector** | `9.3-1` | `sig-mutation`: replace the `pq` value with the literal `"\u20ac"` — three bytes, odd length. |
+| `a_ACP523_sig_respelled_with_whitespace` | **vector** | `9.3-1` | `sig-mutation`: re-spell the genuine `pq` value with a space between hex pairs. Not re-signed, so a verifier that normalises the text decodes the genuine bytes and accepts — the reference did. |
+| `a_ACP523_sig_respelled_with_a_sign` | **vector** | `9.3-1` | `sig-mutation`: re-spell every `0?` pair of the genuine `pq` value as `+?`. The mirror of the row above: the Rust reader's `from_str_radix` accepted it. |
 | `a_ACP106_small_order_attester_key` | **vector** | `9.3-7b-i` | The registry entry is a small-order classical public key, the forged classical signature is fixed bytes (`R` the basepoint, `s = 1`), and the bundle sets `min_suite: ed25519`. Expressible, but not from a seed: no seed derives a small-order point, and the forgery is never produced by signing. `literal-bytes`: the vector must carry the public key and the signature verbatim — the shape `crates/acp-crypto/tests/vectors/refused_ed25519.json` already has. |
 | `a_CR1_unknown_suite` | **vector** | `CR-4` | Receipt `alg: rot13`. |
 | `a_EL1_float_param_lowers_the_grade` | obligation | `8.3.1` | A Proposal parameter written `22.0` rather than `22`. **Not vector-expressible, and the reason is the defect itself.** JSON has one number type, so a data file cannot pin the *lexeme*: a conformant reader may hand `22.0` back as an integer and the case evaporates into its own control. Carrying it needs either a format that preserves number spelling or a declared mutation — "re-spell this parameter as a non-integral number" — in the VEC-3 vocabulary. |
@@ -213,7 +242,7 @@ from the docstring.
 | `a_HM4e_assertion_signature_covers_another_action` | **vector** | `WebauthnSignature` | A genuine signature over another `authenticator_data`: `WebauthnSignature`. `sig-mutation` over the human leg. |
 | `a_HM4f_signature_counter_regresses` | obligation | `WebauthnCounter` | The second assertion's counter is below the first's: `WebauthnCounter`. The stored counter is ledger state the corpus cannot carry; fails (2). |
 
-**Attacks: 64 vector · 18 obligation.**
+**Attacks: 69 vector · 33 obligation.**
 
 ---
 
@@ -237,13 +266,13 @@ keys and no state.
 
 ---
 
-## Suite 9 — signed acknowledgement (17 cases)
+## Suite 9 — signed acknowledgement (29 cases)
 
 Every case here starts from an action already held at the gate, and drives one
-`confirm` or `release`. **All 17 therefore need the vector schema to admit a declared
+`confirm` or `release`. **All 29 therefore need the vector schema to admit a declared
 `pending_release` precondition** — its fields are plain data, so this is a schema
 decision for VEC-2, not a barrier. Cases below are classified on the assumption that the
-decision goes that way; if it does not, all 17 become obligations.
+decision goes that way; if it does not, all 29 become obligations.
 
 | Case | Class | Why |
 | --- | --- | --- |
@@ -260,18 +289,30 @@ decision goes that way; if it does not, all 17 become obligations.
 | `t_ACK6_long_window_refused` | **vector** | `sig-mutation`: over-long `expires_at`, re-signed. |
 | `t_ACK1_open_schema_refused` | **vector** | `sig-mutation`: extra field added and re-signed. |
 | `t_ACK1_decision_confusion_refused` | **vector** | A `REPUDIATE` object presented to `confirm`. |
+| `t_DR16_signed_hold_extends` | obligation | A signed `HOLD` acknowledgement, then a `release` on silence refused under `DR-16`: a sequence. |
+| `t_DR17_machine_may_contain` | **vector** | One signed `OPERATOR_HOLD` object under a machine identity's registered key, and the bundle's audience: verdict accepted, `held_by` the signer. |
+| `t_DR17_wrong_operator_refused` | **vector** | A signed `OPERATOR_HOLD` for one operator presented against another: `ACK-3`. |
+| `t_DR18_two_humans_declare` | **vector** | Two signed `OPERATOR_RELEASE` objects (WebAuthn assertions over `h(obj)`), two AS2 humans in the registry: accepted. |
+| `t_DR18_machine_declarant_refused` | **vector** | One declaration signed under a machine identity's key: `DR-18`, after the signature verified. |
+| `t_DR18_same_person_twice_refused` | **vector** | Two valid declarations by one person (the counter advances, so HM-4 (f) passes): `DR-18`. |
+| `t_DR18_window_past_l34_refused` | **vector** | Two agreeing declarations whose window exceeds the bundle's `break_glass_window_seconds`: `DR-18`. |
+| `t_DR18_declarations_that_disagree_are_refused` | **vector** | Two valid declarations naming different windows: `DR-18`. |
+| `t_DR17_a_person_lifts_with_a_signed_lift` | obligation | An operator hold, then a signed `OPERATOR_LIFT`: a sequence over a caller-owned record. |
+| `t_DR17_a_machine_lift_is_refused` | obligation | As above, the lift signed by a machine identity: `DR-17`. |
+| `t_DR17_the_operator_cannot_lift_own_hold` | obligation | As above, the lift signed by the operator: `DR-9`. |
+| `t_DR17_a_hold_presented_as_a_lift_is_refused` | **vector** | One signed `OPERATOR_HOLD` object presented to the lift: `ACK-1`, decided on the signed bytes alone. |
 | `t_timeout_still_fails_closed` | **vector** | One `release` with no acknowledgement present; verdict `DR-9`. |
 | `t_HM2_a_person_confirms_a_release` | obligation | `confirm` with a WebAuthn assertion over `h(obj)` (HM-2's acknowledgement rule), then `release`. |
 | `t_HM4_a_persons_confirmation_from_another_site_is_refused` | **vector** | The confirmation's assertion carries another origin: refused under `HM-4 (c)`. A signed object, refused by name. |
 | `t_a_persons_confirmation_faces_no_assurance_floor` | obligation | Asserts, as a passing test, that §8.6c applies no AT-10 floor at the acknowledgement: the gap is held open on purpose so closing it is a visible change. A property of the reference, not a verdict. |
 
-**Suite 9: 12 vector · 5 obligation.**
+**Suite 9: 20 vector · 9 obligation.**
 
 ---
 
-## Suite 7 — audit, anchor, accumulator (13 cases)
+## Suite 7 — audit, anchor, accumulator (17 cases)
 
-**11 of the 13 are not vector-expressible, and that was the clearest result in the file
+**15 of the 17 are not vector-expressible, and that was the clearest result in the file
 until a twelfth case was added for a reason worth recording — and a thirteenth, for the same reason.**
 The audit layer's claims are all of the form *"after this sequence, the count is N"*,
 *"the anchor was published before the release"*, or *"the chain reconciles against the
@@ -293,8 +334,12 @@ discriminator is whether an external anchor service is reachable.
 | `t_reconciliation_clean_on_honest_run` | obligation | Full cycle, then reconciliation returns no findings. |
 | `t_AU1_clause_derives_the_implementation_head` | **vector** | The exception, and the only case here that is a pure function: records in, chain heads out. No anchor service, no ordering, no counter — it derives AU-1 and AU-8 from the clause text and compares. Needs the schema to carry an **expected digest** (Suite 5's `t1` already expects a stated value, so this is not a new kind) **and a declared canonicalisation**, which is the load-bearing one: see the note below. |
 | `t_AU9_off_class_record_refused` | **vector** | The same shape as the row above: a record in, a refusal out. AU-9's four off-class shapes — a class outside the seven, a `hold` without its `receipt_nonce`, a member outside the class's set, a writer-placed `seq` — each refused BEFORE the record is hashed, so the head does not move. A pure function of the record and the clause; no anchor, no ordering, no counter. Needs only what a conformance vector already carries: the input and the expected refusal name. |
+| `t_AU9_v1_3_33_records_chain` | obligation | Four lever-class records appended in order; the assertion is the chain's length — a count over a sequence. |
+| `t_DR16_hold_is_a_recorded_lever` | obligation | Asserts the chain's class sequence after a hold and a refused release. |
+| `t_release_record_is_written_once_at_the_terminal_answer` | obligation | §11.1 (v1.3.33): an early attempt adds no record and the terminal answer adds exactly one — a count over a sequence. |
+| `t_DR18_release_under_declaration_is_one_record` | obligation | One record, its shape and its anchor after a declared release — a count and an ordering. |
 
-**Suite 7: 2 vector · 11 obligation.**
+**Suite 7: 2 vector · 15 obligation.**
 
 *The note.* This case is expressible but **not yet extractable**, and the obstacle is
 not the schema. A shared vector would carry a literal digest, and a digest binds to
@@ -312,27 +357,27 @@ audit chain hashes canonical CBOR, or declare the canonicalisation in the vector
 
 | Suite | Cases | Vector-expressible | Obligation |
 | --- | ---: | ---: | ---: |
-| Conformance (Suite 1) | 102 | 71 | 31 |
+| Conformance (Suite 1) | 131 | 77 | 54 |
 | Canonical CBOR (Suite 5) | 8 | 7 | 1 |
-| Signed acknowledgement (Suite 9) | 17 | 12 | 5 |
-| Audit / anchor / accumulator (Suite 7) | 13 | 2 | 11 |
-| **Total** | **140** | **92** | **48** |
+| Signed acknowledgement (Suite 9) | 29 | 20 | 9 |
+| Audit / anchor / accumulator (Suite 7) | 17 | 2 | 15 |
+| **Total** | **185** | **106** | **79** |
 
-Plus **61 mutation cases** — 48 executor, 6 ack, 7 audit — which are obligations by
+Plus **79 mutation cases** — 62 executor, 7 ack, 10 audit — which are obligations by
 definition and get no per-case rows: a mutant deletes a line of the implementation's own
 source, and no data file can ask another implementation to do that. They are the
 repository's evidence that its checks are load-bearing, and that evidence does not
 transfer. VEC-6 must ask each implementation to produce its own.
 
-**92 of 140 cases, or 66%, could become shared data.** What they depend on, none of it
+**106 of 185 cases, or 57%, could become shared data.** What they depend on, none of it
 built:
 
-- the seed-declaration mechanism above: 83 vectors, every vector-expressible case in the
+- the seed-declaration mechanism above: 97 vectors, every vector-expressible case in the
   two suites that sign. The other 9 carry no key material: the 7 canonical-CBOR vectors are
   literal bytes, and AU-1's chain derivation is blocked on the canonicalisation note in
   Suite 7 instead;
-- a declared signature-mutation vocabulary: 17 vectors, marked `sig-mutation`;
-- a `pending_release` precondition block: 12 vectors, every vector-expressible case in
+- a declared signature-mutation vocabulary: 22 vectors, marked `sig-mutation`;
+- a `pending_release` precondition block: 20 vectors, every vector-expressible case in
   Suite 9;
 - a bundle-load verdict class: 6 vectors, marked `bundle-load` — one from ACP-53's registry case, three from v1.3.23's, and two from v1.3.25's PB-11 pair, which is what turned a one-off into a class the schema has to name;
 - a **notification-as-data** class, marked `notification-as-data`: the Notification
@@ -358,7 +403,7 @@ itself stays a judgement made per case.
 Four suites were classified because those four are what ACP-1 names. The gate runs more,
 and their absence here is a scope boundary, not a judgement that they are covered:
 
-- **`attack_registry.py` (124)** — the consolidated registry, which re-runs cases from the
+- **`attack_registry.py` (160)** — the consolidated registry, which re-runs cases from the
   suites above. Classifying it would double-count.
 - **`partition_suite.py` (13)** and **`partition_integration.py` (9)** — ledger partition
   behaviour. Sequences and failure injection throughout; expect close to 0 vectors.

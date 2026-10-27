@@ -2,7 +2,7 @@
 
 ZIFFER is a decision service for AI agents. An agent proposes an action, ZIFFER grades it against signed policy, and the executor on the customer's side runs it only on a verified decision receipt. This repository is the specification of that contract: the rules, the wire formats and the test vectors. It exists so that a party who does not trust ZIFFER can check a receipt without asking ZIFFER anything.
 
-Published from engine commit `8ce54803e0cc7f1a27bd2654bf8c3c144f8ee834`. `PROVENANCE.json` lists every file with its hash. This repository is generated; it takes no pull requests. Findings go to hello@ziffer.io.
+Published from engine commit `d4998aa44b44873cda0c465012b34d13f609e887`. `PROVENANCE.json` lists every file with its hash. This repository is generated; it takes no pull requests. Findings go to hello@ziffer.io.
 
 ## Contents
 

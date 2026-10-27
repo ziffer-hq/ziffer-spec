@@ -33,11 +33,10 @@
   "$defs": {
     "acknowledgement_object": {
       "x-acp-name": "AcknowledgementObject",
-      "description": "The signed acknowledgement object -- the bytes the signature covers and the bytes the id is derived from. ACK-1's closed field set, exactly `ACK1_FIELDS` in `reference/src/acp_ack.py`, in the order that file declares them. Adding a field here is a BREAKING change, never an additive one, for the Z4 reason on the root: a field set with an optional member gives one object two ids and two ledger slots.",
+      "description": "The signed acknowledgement object -- the bytes the signature covers and the bytes the id is derived from. ACK-1's closed field set, exactly `ACK1_FIELDS` in `reference/src/acp_ack.py`, in the order that file declares them. Adding a field here is a BREAKING change, never an additive one, for the Z4 reason on the root: a field set with an optional member gives one object two ids and two ledger slots. SINCE v1.3.33 (ACP-402) THE SET IS CLOSED PER `decision`: CONFIRM, REPUDIATE and HOLD carry `proposal_hash`; OPERATOR_HOLD carries `operator` instead; OPERATOR_RELEASE carries `operator`, `released_until` and `rate_per_hour`. This schema cannot state a set that depends on a value, for the reason `audit_record.schema.json` cannot, so `proposal_hash` is optional here and the consumer enforces the per-decision set (`acp_ack.ACK_FIELDS_BY_DECISION`) before the signature is checked. OPERATOR_LIFT carries `operator`, exactly as OPERATOR_HOLD does.",
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "proposal_hash",
         "policy_bundle_hash",
         "bundle_epoch",
         "acknowledger",
@@ -50,7 +49,7 @@
       "properties": {
         "proposal_hash": {
           "$ref": "https://acp.spec/schemas/wire/attestation_object.schema.json#/$defs/sha256",
-          "description": "THE BINDING, and the reason the object exists rather than a name. ACK-3: this MUST equal the hash the Executor recomputed for the action it is about to release; an acknowledgement of a different action is not an acknowledgement of this one. Without it a captured acknowledgement for a routine action is replayed onto a dangerous one, which is Y1 one layer up -- there a genuine quorum raised for P1 verified against an attacker-chosen P2.\n\nThe Executor compares against ITS OWN recomputed hash, never against a hash the same message supplied: a transmitted identifier is a name for a binding, not evidence of one (RES-8)."
+          "description": "THE BINDING, and the reason the object exists rather than a name. ACK-3: this MUST equal the hash the Executor recomputed for the action it is about to release; an acknowledgement of a different action is not an acknowledgement of this one. Without it a captured acknowledgement for a routine action is replayed onto a dangerous one, which is Y1 one layer up -- there a genuine quorum raised for P1 verified against an attacker-chosen P2.\n\nThe Executor compares against ITS OWN recomputed hash, never against a hash the same message supplied: a transmitted identifier is a name for a binding, not evidence of one (RES-8). Present exactly when `decision` is CONFIRM, REPUDIATE or HOLD (v1.3.33)."
         },
         "policy_bundle_hash": {
           "$ref": "https://acp.spec/schemas/wire/attestation_object.schema.json#/$defs/sha256",
@@ -90,16 +89,35 @@
           "type": "string",
           "minLength": 1,
           "description": "The signature suite `sig` is under. CR-1: every signed structure MUST carry an explicit `alg` naming a suite REGISTERED IN THE SIGNED BUNDLE, and an unregistered or unknown suite MUST fail closed. CR-5: it is signature-covered, so an issuer cannot rewrite the suite without invalidating the object -- an acknowledger cannot downgrade its own suite.\n\nNO ENUM, DELIBERATELY. The suite set is a bundle property, so an enum here would be a second registry of suite names beside the signed one, and two definitions of one object is the defect this repository is built around. It would also break CR-7, which makes migration forward-only and requires a deployment to verify structures signed under a suite HIGHER than its floor: a suite the schema had not been updated to list would be refused at the wrong layer, for the wrong reason, with the wrong clause name.\n\nCR-4 IS CONTAINMENT AND IS DECIDED AGAINST THE BUNDLE. The floor is satisfied when the named suite's primitive set CONTAINS every primitive of the bundle floor's suite -- not by rank. The rank table this replaced was a total order over sets that are not comparable, and it let a deployment whose signed floor said hash-based post-quantum silently accept a lattice one: not a stronger suite accepted, a DIFFERENT hardness assumption substituted, with the floor check reporting satisfaction. The reference checks the floor BEFORE verifying the signature, so a below-floor acknowledgement refuses at CR-4 rather than at ACK-2."
+        },
+        "operator": {
+          "$ref": "https://acp.spec/schemas/wire/attestation_object.schema.json#/$defs/operator_id",
+          "description": "On OPERATOR_HOLD and OPERATOR_LIFT (DR-17) and OPERATOR_RELEASE (DR-18), v1.3.33: the operator the lever acts on -- the binding ACK-3 compares, in place of `proposal_hash`, against the operator the consumer is about to act on."
+        },
+        "released_until": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "On OPERATOR_RELEASE (DR-18): the instant the break-glass window ends, in this object's unit (seconds since the Unix epoch, ACK-6's). Both declarations MUST carry the same value; the consumer refuses a window longer than the bundle's `break_glass_window_seconds` (L-34) under DR-18. The document states no field set for the declaration; this and `rate_per_hour` are the values its `operator_released` record (§11.1) carries."
+        },
+        "rate_per_hour": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000,
+          "description": "On OPERATOR_RELEASE (DR-18): the DR-19 cap the declaration raises for this operator for its window, within L-35's range. Both declarations MUST carry the same value."
         }
       }
     },
     "ack_decision": {
       "x-acp-name": "AcknowledgementDecision",
-      "description": "The two acts an acknowledgement can be. Closed enum: the reference refuses any other value at ACK-1 by name, before the signature is checked, because a third value would be an act with no defined consequence and the release path would have to guess at it.",
+      "description": "The two acts an acknowledgement can be. Closed enum: the reference refuses any other value at ACK-1 by name, before the signature is checked, because a third value would be an act with no defined consequence and the release path would have to guess at it. SINCE v1.3.33 five: DR-16's `hold`, DR-17's `operator_hold` and DR-18's declaration (named OPERATOR_RELEASE after its `operator_released` record; the document names no kind for it) are acknowledgements too, carried in this member in its upper-case spelling because the object has no `kind` member and a second field naming the act would be a second definition of it. And OPERATOR_LIFT (v1.3.33, decided with the session): DR-17's lift, the act that ends an operator hold before its ceiling, carrying `operator`; a machine identity is refused under DR-17 and the operator under DR-9.",
       "type": "string",
       "enum": [
         "CONFIRM",
-        "REPUDIATE"
+        "REPUDIATE",
+        "HOLD",
+        "OPERATOR_HOLD",
+        "OPERATOR_RELEASE",
+        "OPERATOR_LIFT"
       ]
     }
   }

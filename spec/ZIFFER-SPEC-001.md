@@ -5,7 +5,7 @@
 **Document ID:** ZIFFER-SPEC-001
 **Version:** 1.3.33
 **Status:** Draft — all closable items closed. Remaining open: A-7 (conceded unprovable) and independent confirmation (§14 suite 11, structurally unavailable to the authoring parties); hybrid post-quantum signature suites (CR-1..CR-7) per ANSSI hybridation doctrine; deferred release (DR-1..DR-13) with reversibility-keyed confirmation (RV-1..RV-4), mitigating the A-8 presentation residual; all prior findings dispositioned; DS-6f/AT-8b/DR-*/PB-6/PB-7/EL-2 unconfirmed
-**Date:** August 2026
+**Date:** September 2026
 **Supersedes:** v1.3.22, v1.3.21, v1.3.19, v1.3.18, v1.3.17, v1.3.15, v1.3.13, v1.3.12, v1.3.11, v1.3.10, v1.3.4, v1.3.3, v1.3.2, v1.3.1, v1.3.0, v1.2.0 (2026-08)
 
 > **Why 1.3.15 and not 1.3.14.** There is no specification v1.3.14 and there never will be. The *package* release v1.3.14 shipped with this document unchanged at v1.3.13 and says so in `RELEASE.md`; minting a specification v1.3.14 now would put two different artifacts behind one version string, which is precisely the X5 collision this document added a release-integrity rule to prevent. The number is skipped deliberately, and this note exists so that a reader who notices the gap does not go looking for a missing revision.

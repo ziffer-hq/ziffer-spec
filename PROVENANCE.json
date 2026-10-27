@@ -1,5 +1,5 @@
 {
-  "engine_commit": "d4998aa44b44873cda0c465012b34d13f609e887",
+  "engine_commit": "5ae4d63569600a5aa7e13001cda07611653a526d",
   "engine_ref": "main",
   "files": [
     {
@@ -10,7 +10,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "9991513b9e4dff6e3bb901a151882d40d85aafc2fb976afcbfd4a0a0dd7a0d2c",
+      "sha256": "bdad4460d02bdd0a4454502ded27c7d450836d20c283eb6a2f3da4f53633d2ba",
       "source_path": "tools/publish-spec/README.md",
       "source_repo": "engine"
     },
@@ -28,7 +28,7 @@
     },
     {
       "path": "spec/ZIFFER-SPEC-001.md",
-      "sha256": "c19cb980bef2f6b2482cfed25646d38bd0831a8a8a0e7ae1f8112850d335746a",
+      "sha256": "1765ed53cb5b93840ad34340d4735233c40f7999fe92a5970080620a83ced141",
       "source_path": "spec/ZIFFER-SPEC-001.md",
       "source_repo": "engine"
     },
@@ -183,5 +183,5 @@
       "source_repo": "engine"
     }
   ],
-  "generated_at": "2026-10-27T14:40:33Z"
+  "generated_at": "2026-10-27T14:46:35Z"
 }
